@@ -1,0 +1,104 @@
+# ros_gz_bridge.yaml — Configuration du bridge ROS2 <-> Gazebo Harmonic
+#
+# =========================================================
+# QU'EST-CE QUE LE BRIDGE ROS2-GAZEBO ?
+# =========================================================
+# Gazebo et ROS2 sont deux logiciels SÉPARÉS avec leurs propres
+# systèmes de communication :
+#
+#   Gazebo : utilise "gz transport" avec des messages gz.msgs.*
+#   ROS2   : utilise "DDS" avec des messages sensor_msgs/*, std_msgs/*...
+#
+# Le bridge (ros_gz_bridge) est un nœud ROS2 qui :
+# 1. S'abonne à un topic Gazebo
+# 2. Convertit le message au format ROS2
+# 3. Re-publie sur le topic ROS2 correspondant
+# (et vice-versa pour les commandes ROS2 → Gazebo)
+#
+# CE FICHIER liste tous les topics à bridger.
+# Chaque entrée spécifie :
+#   ros_topic_name : nom du topic côté ROS2
+#   gz_topic_name  : nom du topic côté Gazebo (souvent identique)
+#   ros_type_name  : type de message ROS2
+#   gz_type_name   : type de message Gazebo
+#   direction      : sens de la conversion
+#     GZ_TO_ROS  = Gazebo envoie → ROS2 reçoit (capteurs)
+#     ROS_TO_GZ  = ROS2 envoie → Gazebo reçoit (commandes)
+#     BIDIRECTIONAL = les deux sens
+
+# ---------------------------------------------------------
+# IMU — Centrale inertielle
+# ---------------------------------------------------------
+# Le capteur IMU de Gazebo publie orientation + accélération.
+# On convertit gz.msgs.IMU → sensor_msgs/msg/Imu (format ROS2 standard).
+- ros_topic_name: "/beatnaut/imu"
+  gz_topic_name: "/beatnaut/imu"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  gz_type_name: "gz.msgs.IMU"
+  direction: GZ_TO_ROS
+
+# ---------------------------------------------------------
+# GPS / NavSat — Position géographique
+# ---------------------------------------------------------
+# Gazebo publie la position GPS en gz.msgs.NavSat.
+# On convertit vers sensor_msgs/msg/NavSatFix (format ROS2 standard pour GPS).
+# NavSatFix contient : latitude, longitude, altitude + covariance de précision.
+- ros_topic_name: "/beatnaut/navsat"
+  gz_topic_name: "/beatnaut/navsat"
+  ros_type_name: "sensor_msgs/msg/NavSatFix"
+  gz_type_name: "gz.msgs.NavSat"
+  direction: GZ_TO_ROS
+
+# ---------------------------------------------------------
+# THRUSTER PORT — Commande moteur gauche
+# ---------------------------------------------------------
+# On envoie une commande ROS2 (vitesse angulaire de l'hélice en rad/s)
+# qui est convertie et envoyée au ThrusterPlugin de Gazebo.
+# std_msgs/msg/Float64 = un simple nombre flottant 64 bits.
+- ros_topic_name: "/beatnaut/thruster/port/cmd"
+  gz_topic_name: "/beatnaut/thruster/port/cmd"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+# ---------------------------------------------------------
+# THRUSTER STARBOARD — Commande moteur droit
+# ---------------------------------------------------------
+- ros_topic_name: "/beatnaut/thruster/starboard/cmd"
+  gz_topic_name: "/beatnaut/thruster/starboard/cmd"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+# ---------------------------------------------------------
+# CLOCK — Horloge de simulation
+# ---------------------------------------------------------
+# IMPORTANT : En simulation, le temps peut s'écouler différemment
+# du temps réel (si la simulation est lente ou accélérée).
+# Le topic /clock permet à tous les nœuds ROS2 de se synchroniser
+# sur l'heure de simulation plutôt que l'heure système.
+# À utiliser avec use_sim_time:=true dans les nœuds ROS2.
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+# ---------------------------------------------------------
+# ODOMETRY — Position estimée du bateau (optionnel)
+# ---------------------------------------------------------
+# Utile pour le débogage — voir où Gazebo pense que le bateau est.
+- ros_topic_name: "/beatnaut/odometry"
+  gz_topic_name: "/beatnaut/odometry"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+
+# ---------------------------------------------------------
+# POSE — Position et orientation précises (pour le débogage)
+# ---------------------------------------------------------
+- ros_topic_name: "/beatnaut/pose"
+  gz_topic_name: "/world/beatnaut_world/model/beatnaut/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS

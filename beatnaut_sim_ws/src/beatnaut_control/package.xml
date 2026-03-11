@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!--
+  package.xml — Manifeste du package beatnaut_control
+
+  Ce package contient le code Python qui contrôle le bateau.
+  C'est un package ROS2 "ament_python" (code Python pur, pas de C++).
+
+  DÉPENDANCES EXPLIQUÉES :
+
+  rclpy : "ROS Client Library for Python"
+          C'est la bibliothèque Python de ROS2.
+          Tout nœud Python ROS2 doit l'importer pour :
+          - Créer un nœud (Node)
+          - S'abonner/publier sur des topics
+          - Utiliser les services, actions, paramètres...
+
+  geometry_msgs : Package contenant les types de messages géométriques.
+                  On utilise Twist = {linear: {x,y,z}, angular: {x,y,z}}
+                  C'est le type standard pour envoyer des commandes de vitesse
+                  à n'importe quel robot mobile dans ROS2.
+
+  std_msgs : Messages standards simples.
+             On utilise Float64 = un nombre flottant 64 bits.
+             C'est ce qu'on envoie aux propulseurs (vitesse angulaire hélice).
+-->
+<package format="3">
+  <name>beatnaut_control</name>
+  <version>0.1.0</version>
+  <description>
+    Package de contrôle du bateau Beatnaut.
+    Implémente un contrôleur différentiel qui convertit des commandes
+    de vitesse (geometry_msgs/Twist) en commandes individuelles pour
+    chaque propulseur du Beatnaut.
+  </description>
+
+  <maintainer email="beatnaut@engineering.club">Beatnaut Engineering Club</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- Dépendances d'exécution -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

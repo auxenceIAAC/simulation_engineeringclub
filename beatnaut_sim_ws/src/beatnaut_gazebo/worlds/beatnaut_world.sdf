@@ -1,0 +1,193 @@
+<?xml version="1.0"?>
+<!--
+  beatnaut_world.sdf — Monde de simulation Gazebo Harmonic
+
+  =========================================================
+  QU'EST-CE QU'UN "MONDE" GAZEBO ?
+  =========================================================
+  Un monde Gazebo est l'environnement complet de la simulation :
+  - Le sol (ou l'eau dans notre cas)
+  - L'éclairage (soleil, ombres)
+  - Les paramètres physiques (gravité, viscosité de l'air...)
+  - Les plugins du moteur physique
+  - Les modèles présents au démarrage (ici, le bateau)
+
+  Structure d'un monde SDF :
+  <world>
+    <physics>     ← Paramètres du moteur physique
+    <plugin>      ← Systèmes Gazebo actifs dans ce monde
+    <light>       ← Sources lumineuses
+    <model>       ← Objets statiques (sol, obstacles...)
+    <include>     ← Import d'un modèle externe (notre bateau)
+  </world>
+-->
+<sdf version="1.9">
+  <world name="beatnaut_world">
+
+    <!--
+      =====================================================
+      PARAMÈTRES PHYSIQUES
+      =====================================================
+      Le moteur physique ODE (Open Dynamics Engine) est utilisé par défaut.
+      Ces paramètres affectent la précision et la stabilité de la simulation.
+
+      max_step_size : pas de temps de simulation = 1ms
+                      Plus petit = plus précis mais plus lent à calculer
+                      Pour de l'hydrodynamique, 1-4ms est recommandé
+
+      real_time_factor : vitesse de simulation par rapport au temps réel
+                         1.0 = temps réel
+                         0.5 = simulation 2x plus lente que la réalité
+    -->
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!--
+      =====================================================
+      PLUGINS DU MONDE
+      =====================================================
+      Les plugins sont des modules que Gazebo charge pour ajouter des fonctionnalités.
+      Ces 4 plugins sont quasi-obligatoires pour toute simulation ROS2/Gazebo.
+    -->
+
+    <!-- Physics : moteur physique (gravité, collisions, forces) -->
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+
+    <!-- UserCommands : permet d'interagir avec la simulation (spawn, move, etc.) -->
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+
+    <!--
+      SceneBroadcaster : diffuse l'état de la scène vers les clients (GUI Gazebo, RViz2).
+      Sans ce plugin, Gazebo tourne "en aveugle" — rien ne s'affiche.
+    -->
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+
+    <!-- Contact : détecte les collisions entre objets -->
+    <plugin
+      filename="gz-sim-contact-system"
+      name="gz::sim::systems::Contact">
+    </plugin>
+
+    <!--
+      IMU System : activer le plugin IMU au niveau du monde
+      Nécessaire pour que les capteurs IMU dans les modèles fonctionnent.
+    -->
+    <plugin
+      filename="gz-sim-imu-system"
+      name="gz::sim::systems::Imu">
+    </plugin>
+
+    <!--
+      NavSat System : activer le plugin GPS au niveau du monde
+      Nécessaire pour les capteurs NavSat (GPS) dans les modèles.
+    -->
+    <plugin
+      filename="gz-sim-navsat-system"
+      name="gz::sim::systems::NavSat">
+    </plugin>
+
+    <!--
+      =====================================================
+      PLUGIN BUOYANCY AU NIVEAU DU MONDE
+      =====================================================
+      Ce plugin définit le niveau de la surface de l'eau dans le monde.
+      Tout ce qui est en-dessous de fluid_level = 0 est considéré comme immergé.
+
+      fluid_level = 0.0 : la surface de l'eau est au niveau z=0 du monde.
+      Notre bateau démarre à z=0.05, donc sa moitié inférieure est dans l'eau.
+
+      Note : Ce plugin doit aussi être au niveau du monde (pas seulement du modèle)
+      pour calculer correctement le volume immergé.
+    -->
+    <plugin
+      filename="gz-sim-buoyancy-system"
+      name="gz::sim::systems::Buoyancy">
+      <uniform_fluid_density>1000</uniform_fluid_density>
+    </plugin>
+
+    <!--
+      =====================================================
+      ÉCLAIRAGE — SOLEIL
+      =====================================================
+      La lumière directionnelle simule le soleil.
+      Sans éclairage, la scène est noire.
+    -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0.4 0</pose>      <!-- Position (hauteur 100m) -->
+      <diffuse>1.0 1.0 1.0 1</diffuse>  <!-- Lumière blanche -->
+      <specular>0.5 0.5 0.5 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>  <!-- Direction du soleil -->
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <!--
+      =====================================================
+      PLAN D'EAU (GROUND PLANE)
+      =====================================================
+      Un plan infini qui représente la surface de l'eau.
+      Visuellement bleu, positionné à z=0 (niveau de la mer).
+
+      Dans la réalité, nous aurions un plugin "waves" pour simuler les vagues,
+      mais pour commencer, un plan plat suffit.
+    -->
+    <model name="water_plane">
+      <static>true</static>  <!-- Statique = ne bouge pas, ne consomme pas de CPU -->
+      <link name="water_link">
+        <visual name="water_visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>    <!-- Normale vers le haut = plan horizontal -->
+              <size>1000 1000</size>    <!-- 1km × 1km = "infini" pour nos besoins -->
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.0 0.2 0.5 0.8</ambient>   <!-- Bleu semi-transparent -->
+            <diffuse>0.0 0.3 0.7 0.8</diffuse>
+            <specular>0.8 0.8 0.8 1.0</specular> <!-- Reflets brillants sur l'eau -->
+          </material>
+        </visual>
+        <!-- Pas de collision sur l'eau — la physique de flottaison est gérée
+             par le BuoyancyPlugin, pas par des collisions avec ce plan -->
+      </link>
+    </model>
+
+    <!--
+      =====================================================
+      MODÈLE DU BATEAU — INCLUDE
+      =====================================================
+      Au lieu de copier tout le SDF du bateau ici, on l'inclut depuis
+      beatnaut_description. C'est plus propre et maintenable.
+
+      uri : chemin vers le fichier SDF du bateau
+            "package://" est une convention ROS2 pour pointer vers
+            un fichier dans un package ROS2 installé.
+
+      pose : position et orientation initiale du bateau dans le monde
+             Format : x y z roll pitch yaw (en mètres et radians)
+             0.05 m de hauteur = légèrement au-dessus de l'eau au départ
+    -->
+    <include>
+      <uri>package://beatnaut_description/urdf/beatnaut.sdf</uri>
+      <name>beatnaut</name>
+      <pose>0 0 0.05 0 0 0</pose>
+    </include>
+
+  </world>
+</sdf>
