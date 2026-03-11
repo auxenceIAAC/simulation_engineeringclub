@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!--
+  package.xml — Manifeste du package ROS2
+
+  Chaque package ROS2 doit avoir un package.xml qui décrit :
+  - Le nom du package (utilisé par colcon pour le compiler)
+  - Sa version et ses auteurs
+  - Ses dépendances (autres packages ROS2 dont il a besoin)
+
+  beatnaut_description contient uniquement des fichiers statiques (SDF, configs).
+  Il n'a pas de code Python/C++ à exécuter, donc ses dépendances sont minimales.
+-->
+<package format="3">
+  <name>beatnaut_description</name>
+  <version>0.1.0</version>
+  <description>
+    Modèle 3D et description physique du bateau Beatnaut pour ROS2/Gazebo Harmonic.
+    Contient le fichier SDF (Simulation Description Format) qui décrit la géométrie,
+    les masses, l'inertie, les capteurs et les plugins de physique du bateau.
+  </description>
+
+  <maintainer email="beatnaut@engineering.club">Beatnaut Engineering Club</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!--
+    robot_state_publisher : nœud ROS2 qui lit la description du robot
+    et publie les transformations TF2 (positions relatives des pièces du robot).
+    Nécessaire pour que RViz2 et d'autres outils sachent où se trouvent
+    chaque partie du bateau dans l'espace.
+  -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

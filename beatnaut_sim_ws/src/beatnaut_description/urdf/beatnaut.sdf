@@ -1,0 +1,503 @@
+<?xml version="1.0"?>
+<!--
+  beatnaut.sdf — Modèle SDF (Simulation Description Format) du bateau Beatnaut
+
+  =========================================================
+  QU'EST-CE QUE LE FORMAT SDF ?
+  =========================================================
+  SDF est le langage XML natif de Gazebo pour décrire des robots et objets physiques.
+  Contrairement à URDF (format ROS), SDF supporte nativement :
+  - La physique hydrodynamique (flottaison, résistance eau)
+  - Les plugins Gazebo (ThrusterPlugin, BuoyancyPlugin, etc.)
+  - Une syntaxe plus complète pour les capteurs
+
+  Structure d'un fichier SDF :
+  <sdf>
+    <model name="...">     ← Un modèle = un "robot" complet
+      <link name="...">    ← Un link = une pièce rigide du robot
+        <inertial>         ← Propriétés physiques (masse, inertie)
+        <visual>           ← Ce qu'on voit à l'écran
+        <collision>        ← Ce qui entre en collision (peut être simplifié)
+        <sensor>           ← Capteurs attachés à ce link
+      </link>
+      <joint name="...">   ← Connexion entre deux links
+      <plugin>             ← Comportements physiques spéciaux
+    </model>
+  </sdf>
+
+  =========================================================
+  CARACTÉRISTIQUES PHYSIQUES DU BEATNAUT
+  =========================================================
+  - Longueur : 1.50 m
+  - Largeur  : 0.60 m
+  - Hauteur  : 0.20 m (dont ~0.10 m immergé sous la flottaison)
+  - Masse    : 10 kg
+  - Écartement moteurs : 0.50 m (±0.25 m de l'axe central)
+
+  CALCUL DE L'INERTIE (moment d'inertie d'une boîte solide uniforme) :
+  Pour une boîte de masse m, longueur L, largeur W, hauteur H :
+    Ixx = (1/12) * m * (W² + H²) = (1/12) * 10 * (0.36 + 0.04) = 0.333 kg·m²
+    Iyy = (1/12) * m * (L² + H²) = (1/12) * 10 * (2.25 + 0.04) = 1.908 kg·m²
+    Izz = (1/12) * m * (L² + W²) = (1/12) * 10 * (2.25 + 0.36) = 2.175 kg·m²
+  (Ixx ajusté à 0.367 pour tenir compte de la distribution réelle de masse)
+-->
+<sdf version="1.9">
+  <model name="beatnaut">
+
+    <!--
+      =========================================================
+      REPÈRE DE COORDONNÉES DU BATEAU
+      =========================================================
+      Convention ROS/Gazebo :
+        X+ = avant du bateau (proue)
+        Y+ = gauche (port)
+        Z+ = haut
+
+      Le centre du modèle (0,0,0) est au centre géométrique de la coque,
+      au niveau de la flottaison (z=0).
+    -->
+
+    <!-- Pose initiale dans le monde : légèrement au-dessus de l'eau -->
+    <pose>0 0 0.05 0 0 0</pose>
+
+    <!-- Permet au modèle de bouger librement dans la simulation -->
+    <static>false</static>
+
+    <!-- =====================================================
+         LINK : HULL (COQUE PRINCIPALE)
+         =====================================================
+         Le "link" est la pièce physique principale du bateau.
+         Tout ce qui concerne la physique (masse, inertie) est ici.
+    -->
+    <link name="hull">
+
+      <!--
+        INERTIAL — Propriétés physiques
+        Ces valeurs déterminent comment le bateau réagit aux forces.
+        Une inertie incorrecte rend la simulation instable !
+      -->
+      <inertial>
+        <mass>10.0</mass>  <!-- kg -->
+        <inertia>
+          <!-- Moments d'inertie (voir calcul en tête de fichier) -->
+          <ixx>0.367</ixx>   <!-- Résistance aux rotations roll (tangage latéral) -->
+          <ixy>0</ixy>       <!-- Produits d'inertie = 0 (symétrie parfaite) -->
+          <ixz>0</ixz>
+          <iyy>1.908</iyy>   <!-- Résistance aux rotations pitch (tangage avant/arrière) -->
+          <iyz>0</iyz>
+          <izz>2.175</izz>   <!-- Résistance aux rotations yaw (rotation horizontale) -->
+        </inertia>
+        <!-- Centre de masse légèrement sous le centre géométrique pour la stabilité -->
+        <pose>0 0 -0.02 0 0 0</pose>
+      </inertial>
+
+      <!--
+        VISUAL — Apparence 3D dans Gazebo
+        Ce que tu vois dans le simulateur. Peut être plus détaillé que la collision.
+      -->
+      <visual name="hull_visual">
+        <geometry>
+          <box>
+            <size>1.50 0.60 0.20</size>  <!-- longueur x largeur x hauteur en mètres -->
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.0 0.3 0.8 1.0</ambient>   <!-- Couleur ambiante bleue -->
+          <diffuse>0.0 0.4 0.9 1.0</diffuse>   <!-- Couleur diffuse bleue marine -->
+          <specular>0.5 0.5 0.5 1.0</specular> <!-- Reflet brillant -->
+        </material>
+      </visual>
+
+      <!--
+        COLLISION — Forme utilisée pour le calcul des collisions
+        En général identique au visual, mais peut être simplifiée
+        pour de meilleures performances de simulation.
+      -->
+      <collision name="hull_collision">
+        <geometry>
+          <box>
+            <size>1.50 0.60 0.20</size>
+          </box>
+        </geometry>
+        <!-- Surface de frottement et rebond (valeurs pour un bateau sur eau) -->
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.1</mu>   <!-- Coefficient de frottement faible (surface mouillée) -->
+              <mu2>0.1</mu2>
+            </ode>
+          </friction>
+          <bounce>
+            <restitution_coefficient>0.0</restitution_coefficient>  <!-- Pas de rebond -->
+          </bounce>
+        </surface>
+      </collision>
+
+      <!--
+        =====================================================
+        CAPTEUR IMU (Inertial Measurement Unit)
+        =====================================================
+        L'IMU mesure :
+        - L'orientation du bateau (roulis, tangage, lacet) via gyroscope
+        - Les accélérations linéaires via accéléromètre
+        - Utile pour la navigation et la stabilisation
+
+        update_rate 100 : 100 mesures par seconde (standard pour IMU)
+      -->
+      <sensor name="imu_sensor" type="imu">
+        <pose>0 0 0.05 0 0 0</pose>  <!-- Monté légèrement au-dessus du centre -->
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>  <!-- Hz : fréquence de mesure -->
+        <imu>
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <!-- Bruit réaliste pour simuler une vraie IMU -->
+                <mean>0.0</mean>
+                <stddev>0.009</stddev>  <!-- 9 mdeg/s de bruit typique -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.009</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.009</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.196</stddev>  <!-- ~0.02g de bruit typique -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.196</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.196</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <plugin filename="gz-sim-imu-system"
+                name="gz::sim::systems::Imu">
+        </plugin>
+        <!-- Topic Gazebo où les données IMU seront publiées -->
+        <topic>/beatnaut/imu</topic>
+      </sensor>
+
+      <!--
+        =====================================================
+        CAPTEUR GPS/NAVSAT
+        =====================================================
+        NavSat = Navigation Satellite (GPS, GLONASS, etc.)
+        Mesure la position géographique (latitude, longitude, altitude)
+        dans le monde simulé.
+
+        update_rate 10 : 10 positions GPS par seconde (standard pour GPS)
+      -->
+      <sensor name="navsat_sensor" type="navsat">
+        <pose>0 0 0.08 0 0 0</pose>  <!-- Antenne GPS sur le dessus -->
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>  <!-- Hz : GPS standard = 1-10 Hz -->
+        <navsat>
+          <position_sensing>
+            <horizontal>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.5</stddev>  <!-- ±0.5m de précision (GPS civil standard) -->
+              </noise>
+            </horizontal>
+            <vertical>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.0</stddev>  <!-- ±1m vertical (GPS moins précis verticalement) -->
+              </noise>
+            </vertical>
+          </position_sensing>
+          <velocity_sensing>
+            <horizontal>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.1</stddev>  <!-- ±0.1 m/s de précision vitesse -->
+              </noise>
+            </horizontal>
+          </velocity_sensing>
+        </navsat>
+        <plugin filename="gz-sim-navsat-system"
+                name="gz::sim::systems::NavSat">
+        </plugin>
+        <!-- Topic Gazebo où les données GPS seront publiées -->
+        <topic>/beatnaut/navsat</topic>
+      </sensor>
+
+    </link>
+    <!-- Fin du link hull -->
+
+    <!-- =====================================================
+         LINK : THRUSTER PORT (MOTEUR GAUCHE)
+         =====================================================
+         Représentation visuelle du propulseur gauche (côté port).
+         Dans la convention nautique : port = gauche quand on regarde vers l'avant.
+
+         Position :
+           x = -0.70 m (70 cm à l'arrière du centre)
+           y = +0.25 m (25 cm à gauche = côté port)
+           z = -0.05 m (légèrement sous la flottaison)
+    -->
+    <link name="thruster_port">
+      <pose>-0.70 0.25 -0.05 0 1.5708 0</pose>
+      <!-- Rotation de 90° autour de Y pour que l'axe du cylindre
+           soit aligné avec l'axe de propulsion (avant/arrière) -->
+
+      <inertial>
+        <mass>0.5</mass>  <!-- kg, poids du moteur + hélice -->
+        <inertia>
+          <!-- Inertie d'un petit cylindre de 0.5kg -->
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="thruster_port_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>   <!-- 4 cm de rayon (représente l'hélice) -->
+            <length>0.12</length>   <!-- 12 cm de long (tube du propulseur) -->
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.7 0.7 0.1 1.0</ambient>   <!-- Couleur jaune pour distinguer -->
+          <diffuse>0.9 0.9 0.2 1.0</diffuse>
+        </material>
+      </visual>
+
+      <collision name="thruster_port_collision">
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>0.12</length>
+          </cylinder>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- =====================================================
+         JOINT : CONNEXION HULL <-> THRUSTER PORT
+         =====================================================
+         Un joint "fixed" = pièce rigidement soudée à la coque.
+         Le moteur ne peut pas bouger par rapport à la coque.
+
+         Autres types de joints possibles en SDF :
+         - revolute : rotation autour d'un axe (comme une roue)
+         - prismatic : translation sur un axe (comme un piston)
+         - ball : rotule (rotation libre dans toutes directions)
+    -->
+    <joint name="thruster_port_joint" type="fixed">
+      <parent>hull</parent>              <!-- Pièce "parent" = la coque -->
+      <child>thruster_port</child>       <!-- Pièce "enfant" = le moteur -->
+    </joint>
+
+    <!-- =====================================================
+         LINK : THRUSTER STARBOARD (MOTEUR DROIT)
+         =====================================================
+         Starboard = droite dans la convention nautique.
+         Position miroir du moteur gauche (y = -0.25 m au lieu de +0.25 m).
+    -->
+    <link name="thruster_starboard">
+      <pose>-0.70 -0.25 -0.05 0 1.5708 0</pose>
+
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="thruster_starboard_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>0.12</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.7 0.7 0.1 1.0</ambient>
+          <diffuse>0.9 0.9 0.2 1.0</diffuse>
+        </material>
+      </visual>
+
+      <collision name="thruster_starboard_collision">
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>0.12</length>
+          </cylinder>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="thruster_starboard_joint" type="fixed">
+      <parent>hull</parent>
+      <child>thruster_starboard</child>
+    </joint>
+
+    <!-- =====================================================
+         PLUGIN : BUOYANCY (FLOTTABILITÉ / POUSSÉE D'ARCHIMÈDE)
+         =====================================================
+         Ce plugin implémente le principe d'Archimède dans Gazebo.
+
+         CONCEPT PHYSIQUE :
+         Tout corps immergé dans un fluide reçoit une poussée verticale
+         vers le haut égale au poids du fluide déplacé.
+         F_archimède = ρ × V_immergé × g
+         Où :
+           ρ = densité du fluide (1000 kg/m³ pour l'eau douce)
+           V = volume immergé
+           g = 9.81 m/s²
+
+         Sans ce plugin :
+         - Le bateau tomberait à travers l'eau (gravité non compensée)
+         - La simulation serait physiquement incorrecte
+
+         PARAMÈTRES :
+         - link_name : le link sur lequel appliquer la force
+         - fluid_density : densité de l'eau douce = 1000 kg/m³
+                          (eau salée ≈ 1025 kg/m³)
+    -->
+    <plugin
+      filename="gz-sim-buoyancy-system"
+      name="gz::sim::systems::Buoyancy">
+      <link_name>hull</link_name>
+      <fluid_density>1000</fluid_density>
+    </plugin>
+
+    <!-- =====================================================
+         PLUGIN : HYDRODYNAMICS (RÉSISTANCE DE L'EAU)
+         =====================================================
+         Ce plugin simule la résistance hydrodynamique — la façon dont
+         l'eau freine le mouvement du bateau.
+
+         CONCEPT PHYSIQUE :
+         Un objet qui se déplace dans l'eau ressent deux types de résistance :
+         1. Résistance visqueuse (linéaire) : proportionnelle à la vitesse
+            F = -K × v
+         2. Résistance de pression (quadratique) : proportionnelle à v²
+            F = -K × v × |v|
+            Cette résistance domine à haute vitesse.
+
+         PARAMÈTRES (convention SNAME pour sous-marins/bateaux) :
+         Notation : x=avant/arrière, y=gauche/droite, z=haut/bas
+
+         Résistances linéaires (pour les faibles vitesses) :
+         - xDotU = -0.5   : résistance en surge (avant/arrière) linéaire
+         - yDotV = -10.0  : résistance en sway (latéral) linéaire
+                            (plus fort car le bateau est large)
+         - nDotR = -1.0   : résistance en yaw (rotation) linéaire
+
+         Résistances quadratiques (pour les hautes vitesses) :
+         - xUU = -5.0     : résistance en surge quadratique
+         - yVV = -50.0    : résistance en sway quadratique
+                            (très fort, le bateau est peu aérodynamique latéralement)
+         - nRR = -5.0     : résistance en yaw quadratique
+
+         Ces valeurs sont basées sur des modèles empiriques pour un
+         catamaran de 10kg. Elles peuvent être ajustées après tests.
+    -->
+    <plugin
+      filename="gz-sim-hydrodynamics-system"
+      name="gz::sim::systems::Hydrodynamics">
+      <link_name>hull</link_name>
+      <!-- Résistances linéaires -->
+      <xDotU>-0.5</xDotU>
+      <yDotV>-10.0</yDotV>
+      <zDotW>-20.0</zDotW>
+      <kDotP>-0.1</kDotP>
+      <mDotQ>-0.5</mDotQ>
+      <nDotR>-1.0</nDotR>
+      <!-- Résistances quadratiques (proportionnelles à v²) -->
+      <xUU>-5.0</xUU>
+      <yVV>-50.0</yVV>
+      <zWW>-100.0</zWW>
+      <kPP>-0.1</kPP>
+      <mQQ>-1.0</mQQ>
+      <nRR>-5.0</nRR>
+    </plugin>
+
+    <!-- =====================================================
+         PLUGIN : THRUSTER PORT (PROPULSEUR GAUCHE)
+         =====================================================
+         Ce plugin convertit une commande ROS2 (vitesse angulaire de l'hélice
+         en rad/s) en force de poussée appliquée au bateau.
+
+         PHYSIQUE DU PROPULSEUR :
+         La force de poussée est calculée selon la formule :
+         F = Kt × ρ × n² × D⁴
+         Où :
+           Kt = thrust_coefficient (0.004) = coefficient caractéristique de l'hélice
+           ρ  = densité du fluide (1000 kg/m³)
+           n  = vitesse de rotation de l'hélice (tours/s)
+           D  = diamètre de l'hélice (0.08 m)
+
+         Plus n est grand → plus la force de poussée est grande.
+         Si n est négatif → poussée en arrière (marche arrière).
+
+         TOPIC : /beatnaut/thruster/port/cmd
+         Type  : gz.msgs.Double (un simple nombre flottant)
+         Valeur: vitesse angulaire de l'hélice en rad/s
+                 300 rad/s ≈ 2865 RPM (vitesse max approximative)
+    -->
+    <plugin
+      filename="gz-sim-thruster-system"
+      name="gz::sim::systems::Thruster">
+      <namespace>beatnaut</namespace>
+      <joint_name>thruster_port_joint</joint_name>
+      <thrust_coefficient>0.004</thrust_coefficient>  <!-- Kt -->
+      <fluid_density>1000</fluid_density>             <!-- ρ eau douce -->
+      <propeller_diameter>0.08</propeller_diameter>   <!-- D = 8 cm -->
+      <velocity_control>true</velocity_control>
+      <!-- Le topic sur lequel écouter les commandes -->
+      <topic>/beatnaut/thruster/port/cmd</topic>
+    </plugin>
+
+    <!-- =====================================================
+         PLUGIN : THRUSTER STARBOARD (PROPULSEUR DROIT)
+         =====================================================
+         Identique au propulseur gauche, mais écoute sur un topic différent.
+         Cela permet de contrôler chaque moteur indépendamment.
+    -->
+    <plugin
+      filename="gz-sim-thruster-system"
+      name="gz::sim::systems::Thruster">
+      <namespace>beatnaut</namespace>
+      <joint_name>thruster_starboard_joint</joint_name>
+      <thrust_coefficient>0.004</thrust_coefficient>
+      <fluid_density>1000</fluid_density>
+      <propeller_diameter>0.08</propeller_diameter>
+      <velocity_control>true</velocity_control>
+      <topic>/beatnaut/thruster/starboard/cmd</topic>
+    </plugin>
+
+  </model>
+</sdf>

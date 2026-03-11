@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!--
+  package.xml — Manifeste du package beatnaut_gazebo
+
+  Ce package gère TOUT ce qui concerne le lancement et la configuration
+  de la simulation Gazebo Harmonic pour le Beatnaut.
+
+  DÉPENDANCES EXPLIQUÉES :
+
+  ros_gz_sim : Package qui fournit les outils pour intégrer Gazebo Harmonic
+               avec ROS2. Contient notamment :
+               - gz_ros2_control : intégration avec le système de contrôle
+               - Les adaptateurs de types de messages
+               - Le nœud de spawn (pour placer le robot dans Gazebo)
+
+  ros_gz_bridge : Le "pont" qui traduit les messages entre Gazebo et ROS2.
+                  Gazebo utilise son propre système de messages (gz.msgs),
+                  ROS2 utilise des types standardisés (sensor_msgs, std_msgs...).
+                  Le bridge fait la conversion en temps réel.
+
+  robot_state_publisher : Publie les transformations TF2 du robot.
+                          TF2 = système de référentiels dans ROS2.
+                          Permet à tous les outils (RViz2, navigation...) de
+                          savoir où se trouve chaque partie du robot.
+
+  beatnaut_description : Notre package qui contient le fichier SDF du bateau.
+                         On en a besoin pour trouver le chemin vers beatnaut.sdf.
+-->
+<package format="3">
+  <name>beatnaut_gazebo</name>
+  <version>0.1.0</version>
+  <description>
+    Package de simulation Gazebo Harmonic pour le bateau Beatnaut.
+    Contient le monde de simulation, les fichiers de configuration du bridge
+    ROS2-Gazebo, et les launch files pour démarrer la simulation complète.
+  </description>
+
+  <maintainer email="beatnaut@engineering.club">Beatnaut Engineering Club</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Dépendances d'exécution (nécessaires quand on LANCE la simulation) -->
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>beatnaut_description</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
