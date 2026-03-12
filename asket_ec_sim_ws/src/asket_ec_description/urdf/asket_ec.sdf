@@ -146,8 +146,8 @@
         similaire à la résistance linéaire de l'eau à faible vitesse.
       -->
       <velocity_decay>
-        <linear>0.3</linear>
-        <angular>0.5</angular>
+        <linear>0.8</linear>
+        <angular>0.9</angular>
       </velocity_decay>
 
       <!--
@@ -394,12 +394,44 @@
       </axis>
     </joint>
 
-    <!--
-      HydrodynamicsPlugin désactivé temporairement — incompatible avec DART
-      sous WSL2 (provoque "ODE INTERNAL ERROR in collide()").
-      L'amortissement est remplacé par <velocity_decay> sur le link hull.
-      Ce plugin sera réintroduit quand la compatibilité DART sera confirmée.
+    <!-- =====================================================
+         PLUGIN : HYDRODYNAMICS (RÉSISTANCE DE L'EAU)
+         =====================================================
+         Réintroduit avec des coefficients conservateurs pour DART/WSL2.
+
+         Coefficients d'ajout de masse (termes linéaires) = 0 :
+         Évite les instabilités numériques au démarrage sous DART.
+         Les forces d'inertie ajoutée sont les plus susceptibles de
+         provoquer des divergences au premier step de simulation.
+
+         Coefficients quadratiques (résistance proportionnelle à v²) :
+         - xUU = -5.0   : freinage en avance/recul (surge)
+         - yVV = -50.0  : freinage latéral (sway) — fort car le bateau est plat
+         - zWW = -500.0 : freinage vertical (heave) — très fort pour stabiliser
+                          la flottaison et éviter les oscillations verticales
+         - kPP = -5.0   : freinage en roulis (roll)
+         - mQQ = -5.0   : freinage en tangage (pitch)
+         - nRR = -5.0   : freinage en lacet (yaw)
     -->
+    <plugin
+      filename="gz-sim-hydrodynamics-system"
+      name="gz::sim::systems::Hydrodynamics">
+      <link_name>hull</link_name>
+      <!-- Coefficients d'inertie ajoutée = 0 pour stabilité DART -->
+      <xDotU>0</xDotU>
+      <yDotV>0</yDotV>
+      <zDotW>0</zDotW>
+      <kDotP>0</kDotP>
+      <mDotQ>0</mDotQ>
+      <nDotR>0</nDotR>
+      <!-- Résistances quadratiques conservatrices -->
+      <xUU>-5.0</xUU>
+      <yVV>-50.0</yVV>
+      <zWW>-500.0</zWW>
+      <kPP>-5.0</kPP>
+      <mQQ>-5.0</mQQ>
+      <nRR>-5.0</nRR>
+    </plugin>
 
     <!-- =====================================================
          PLUGIN : THRUSTER PORT (PROPULSEUR GAUCHE)
