@@ -46,6 +46,11 @@ def generate_launch_description():
     Elle doit retourner un LaunchDescription avec tous les composants à démarrer.
     """
 
+    # GZ_IP=127.0.0.1 doit être défini AVANT le démarrage de Gazebo.
+    # Sans cette variable, le discovery gz-transport échoue sur loopback et
+    # `gz topic -l` retourne vide — le bridge ROS2↔Gazebo ne voit aucun topic.
+    os.environ['GZ_IP'] = '127.0.0.1'
+
     # =========================================================
     # ÉTAPE 1 : Trouver les chemins vers les packages
     # =========================================================
@@ -126,6 +131,9 @@ def generate_launch_description():
             for p in os.environ.get('AMENT_PREFIX_PATH', '').split(':')
             if p
         ),
+        # GZ_IP : force le discovery gz-transport sur loopback 127.0.0.1.
+        # Sans ça, gz topic -l est vide et le bridge ROS2↔Gazebo ne fonctionne pas.
+        'GZ_IP': '127.0.0.1',
         # Rendu logiciel (CPU) pour WSL2 (pas de GPU OpenGL)
         'LIBGL_ALWAYS_SOFTWARE': '1',
         'MESA_GL_VERSION_OVERRIDE': '3.3',

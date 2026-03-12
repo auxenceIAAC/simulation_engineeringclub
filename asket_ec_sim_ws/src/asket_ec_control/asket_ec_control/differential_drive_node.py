@@ -165,14 +165,14 @@ class DifferentialDriveNode(Node):
             f'  En attente de commandes sur /cmd_vel...'
         )
 
-    def cmd_vel_callback(self, msg: Twist):
+    def cmd_vel_callback(self, msg):
         """
         Callback appelé à chaque message reçu sur /cmd_vel.
-
-        C'est ici que se fait la conversion Twist → commandes moteurs.
+        Signature sans annotation de type : rclpy lève un RuntimeError
+        "Unable to convert call argument" si la signature est typée.
 
         Args:
-            msg: Message geometry_msgs/Twist contenant
+            msg (geometry_msgs.msg.Twist):
                  msg.linear.x  = vitesse d'avance (m/s)
                  msg.angular.z = vitesse de rotation (rad/s)
         """
