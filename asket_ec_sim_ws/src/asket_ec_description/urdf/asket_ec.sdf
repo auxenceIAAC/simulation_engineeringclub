@@ -109,30 +109,10 @@
         </material>
       </visual>
 
-      <!--
-        COLLISION — Forme utilisée pour le calcul des collisions
-        En général identique au visual, mais peut être simplifiée
-        pour de meilleures performances de simulation.
-      -->
-      <collision name="hull_collision">
-        <geometry>
-          <box>
-            <size>1.50 0.60 0.20</size>
-          </box>
-        </geometry>
-        <!-- Surface de frottement et rebond (valeurs pour un bateau sur eau) -->
-        <surface>
-          <friction>
-            <ode>
-              <mu>0.1</mu>   <!-- Coefficient de frottement faible (surface mouillée) -->
-              <mu2>0.1</mu2>
-            </ode>
-          </friction>
-          <bounce>
-            <restitution_coefficient>0.0</restitution_coefficient>  <!-- Pas de rebond -->
-          </bounce>
-        </surface>
-      </collision>
+      <!-- PAS de <collision> sur le hull — la flottaison est gérée par
+           le BuoyancyPlugin via le volume du <visual>, pas via les collisions.
+           Supprimer la collision élimine les auto-collisions hull/thruster
+           qui provoquaient le crash "ODE INTERNAL ERROR in collide()" sous DART. -->
 
       <!--
         VELOCITY DECAY — Amortissement linéaire et angulaire
@@ -301,14 +281,7 @@
         </material>
       </visual>
 
-      <collision name="thruster_port_collision">
-        <geometry>
-          <cylinder>
-            <radius>0.04</radius>
-            <length>0.12</length>
-          </cylinder>
-        </geometry>
-      </collision>
+      <!-- PAS de <collision> — évite les auto-collisions avec le hull sous DART -->
     </link>
 
     <!-- =====================================================
@@ -371,14 +344,7 @@
         </material>
       </visual>
 
-      <collision name="thruster_starboard_collision">
-        <geometry>
-          <cylinder>
-            <radius>0.04</radius>
-            <length>0.12</length>
-          </cylinder>
-        </geometry>
-      </collision>
+      <!-- PAS de <collision> — évite les auto-collisions avec le hull sous DART -->
     </link>
 
     <joint name="thruster_starboard_joint" type="revolute">
