@@ -306,9 +306,18 @@
          - prismatic : translation sur un axe (comme un piston)
          - ball : rotule (rotation libre dans toutes directions)
     -->
-    <joint name="thruster_port_joint" type="fixed">
-      <parent>hull</parent>              <!-- Pièce "parent" = la coque -->
-      <child>thruster_port</child>       <!-- Pièce "enfant" = le moteur -->
+    <!-- Joint revolute : le plugin Thruster a besoin de faire tourner le joint
+         pour calculer la poussée. L'axe X = direction avant/arrière du bateau. -->
+    <joint name="thruster_port_joint" type="revolute">
+      <parent>hull</parent>
+      <child>thruster_port</child>
+      <axis>
+        <xyz>1 0 0</xyz>           <!-- Rotation autour de l'axe X = propulsion avant -->
+        <limit>
+          <lower>-1e+12</lower>    <!-- Pas de limite de rotation (hélice continue) -->
+          <upper>1e+12</upper>
+        </limit>
+      </axis>
     </joint>
 
     <!-- =====================================================
@@ -355,40 +364,17 @@
       </collision>
     </link>
 
-    <joint name="thruster_starboard_joint" type="fixed">
+    <joint name="thruster_starboard_joint" type="revolute">
       <parent>hull</parent>
       <child>thruster_starboard</child>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-1e+12</lower>
+          <upper>1e+12</upper>
+        </limit>
+      </axis>
     </joint>
-
-    <!-- =====================================================
-         PLUGIN : BUOYANCY (FLOTTABILITÉ / POUSSÉE D'ARCHIMÈDE)
-         =====================================================
-         Ce plugin implémente le principe d'Archimède dans Gazebo.
-
-         CONCEPT PHYSIQUE :
-         Tout corps immergé dans un fluide reçoit une poussée verticale
-         vers le haut égale au poids du fluide déplacé.
-         F_archimède = ρ × V_immergé × g
-         Où :
-           ρ = densité du fluide (1000 kg/m³ pour l'eau douce)
-           V = volume immergé
-           g = 9.81 m/s²
-
-         Sans ce plugin :
-         - Le bateau tomberait à travers l'eau (gravité non compensée)
-         - La simulation serait physiquement incorrecte
-
-         PARAMÈTRES :
-         - link_name : le link sur lequel appliquer la force
-         - fluid_density : densité de l'eau douce = 1000 kg/m³
-                          (eau salée ≈ 1025 kg/m³)
-    -->
-    <plugin
-      filename="gz-sim-buoyancy-system"
-      name="gz::sim::systems::Buoyancy">
-      <link_name>hull</link_name>
-      <fluid_density>1000</fluid_density>
-    </plugin>
 
     <!-- =====================================================
          PLUGIN : HYDRODYNAMICS (RÉSISTANCE DE L'EAU)

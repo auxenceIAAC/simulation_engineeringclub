@@ -127,6 +127,10 @@ def generate_launch_description():
                 for p in os.environ.get('AMENT_PREFIX_PATH', '').split(':')
                 if p
             ),
+            # Rendu logiciel (CPU) : nécessaire sous WSL2 qui n'a pas
+            # toujours un driver OpenGL fonctionnel pour Gazebo.
+            'LIBGL_ALWAYS_SOFTWARE': '1',
+            'MESA_GL_VERSION_OVERRIDE': '3.3',
         }
     )
 
