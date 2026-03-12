@@ -27,10 +27,11 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    """Lance simulator_node + RViz2 avec la config sim2d.rviz."""
+    """Lance simulator_node + waypoint_navigator_node + RViz2."""
 
     pkg_sim2d = get_package_share_directory('asket_ec_sim2d')
     rviz_config = os.path.join(pkg_sim2d, 'config', 'sim2d.rviz')
+    waypoints_file = os.path.join(pkg_sim2d, 'config', 'waypoints.yaml')
 
     # use_sim_time=false : le simulateur Python utilise l'horloge système.
     # Pas de /clock publié → pas de "jump back in time" dans RViz2.
@@ -51,6 +52,19 @@ def generate_launch_description():
         }]
     )
 
+    # Nœud navigateur par waypoints
+    # Charge waypoints.yaml, trie par distance, publie /cmd_vel
+    waypoint_navigator_node = Node(
+        package='asket_ec_sim2d',
+        executable='waypoint_navigator_node',
+        name='waypoint_navigator',
+        output='screen',
+        parameters=[{
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'waypoints_file': waypoints_file,
+        }]
+    )
+
     # RViz2 avec la config dédiée sim2d
     rviz_node = Node(
         package='rviz2',
@@ -66,5 +80,6 @@ def generate_launch_description():
     return LaunchDescription([
         use_sim_time_arg,
         simulator_node,
+        waypoint_navigator_node,
         rviz_node,
     ])

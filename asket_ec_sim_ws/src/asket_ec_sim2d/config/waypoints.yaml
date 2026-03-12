@@ -1,0 +1,18 @@
+# waypoints.yaml — Liste des waypoints GPS pour le navigateur automatique
+#
+# Coordonnées autour du port de Barcelone (41.3851°N, 2.1734°E).
+# Unités : degrés décimaux (WGS84).
+#
+# Le nœud waypoint_navigator_node.py :
+#   1. Trie ces points du plus proche au plus éloigné
+#      par rapport à la position initiale du bateau (0, 0)
+#   2. Dirige le bateau vers chaque point dans cet ordre
+#   3. Passe au suivant quand le bateau est à < 2m
+#
+# Pour modifier la route, éditez ce fichier et relancez le nœud.
+waypoints:
+  - {lat: 41.3851, lon: 2.1734}   # Point 0 — origine (port)
+  - {lat: 41.3860, lon: 2.1750}   # Point 1 — nord-est
+  - {lat: 41.3870, lon: 2.1734}   # Point 2 — nord
+  - {lat: 41.3860, lon: 2.1720}   # Point 3 — nord-ouest
+  - {lat: 41.3851, lon: 2.1710}   # Point 4 — ouest
