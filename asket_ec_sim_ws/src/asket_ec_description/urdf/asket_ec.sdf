@@ -282,6 +282,14 @@
       </visual>
 
       <!-- PAS de <collision> — évite les auto-collisions avec le hull sous DART -->
+
+      <!-- Gravity false + damping sur le thruster_port pour éviter
+           que le link tourne librement sous le couple de réaction -->
+      <gravity>false</gravity>
+      <velocity_decay>
+        <linear>0.5</linear>
+        <angular>0.9</angular>
+      </velocity_decay>
     </link>
 
     <!-- =====================================================
@@ -295,19 +303,13 @@
          - prismatic : translation sur un axe (comme un piston)
          - ball : rotule (rotation libre dans toutes directions)
     -->
-    <!-- Joint revolute : le plugin Thruster a besoin de faire tourner le joint
-         pour calculer la poussée. L'axe X = direction avant/arrière du bateau. -->
-    <joint name="thruster_port_joint" type="revolute">
+    <!-- Joint FIXED : thruster rigidement attaché à la coque.
+         Changé de "revolute" en "fixed" pour éviter que le joint tourne
+         librement (sans collision pour le contraindre) et fasse basculer
+         le hull via les couples de réaction. -->
+    <joint name="thruster_port_joint" type="fixed">
       <parent>hull</parent>
       <child>thruster_port</child>
-      <axis>
-        <xyz>1 0 0</xyz>           <!-- Rotation autour de l'axe X = propulsion avant -->
-        <limit>
-          <lower>-1e+12</lower>    <!-- Pas de limite de rotation (hélice continue) -->
-          <upper>1e+12</upper>
-          <effort>1000</effort>    <!-- Couple max (N·m) — requis par ODE pour éviter collide() crash -->
-        </limit>
-      </axis>
     </joint>
 
     <!-- =====================================================
@@ -345,19 +347,19 @@
       </visual>
 
       <!-- PAS de <collision> — évite les auto-collisions avec le hull sous DART -->
+
+      <!-- Gravity false + damping sur le thruster_starboard -->
+      <gravity>false</gravity>
+      <velocity_decay>
+        <linear>0.5</linear>
+        <angular>0.9</angular>
+      </velocity_decay>
     </link>
 
-    <joint name="thruster_starboard_joint" type="revolute">
+    <!-- Joint FIXED : même raison que thruster_port_joint -->
+    <joint name="thruster_starboard_joint" type="fixed">
       <parent>hull</parent>
       <child>thruster_starboard</child>
-      <axis>
-        <xyz>1 0 0</xyz>
-        <limit>
-          <lower>-1e+12</lower>
-          <upper>1e+12</upper>
-          <effort>1000</effort>    <!-- Couple max (N·m) — requis par ODE pour éviter collide() crash -->
-        </limit>
-      </axis>
     </joint>
 
     <!-- =====================================================
