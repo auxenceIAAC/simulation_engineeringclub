@@ -97,37 +97,11 @@
       name="gz::sim::systems::NavSat">
     </plugin>
 
-    <!--
-      =====================================================
-      PLUGIN BUOYANCY AU NIVEAU DU MONDE
-      =====================================================
-      Ce plugin définit le niveau de la surface de l'eau dans le monde.
-      Tout ce qui est en-dessous de fluid_level = 0 est considéré comme immergé.
-
-      fluid_level = 0.0 : la surface de l'eau est au niveau z=0 du monde.
-      Notre bateau démarre à z=0.15, la flottaison le ramène à l'équilibre.
-
-      Note : Ce plugin doit aussi être au niveau du monde (pas seulement du modèle)
-      pour calculer correctement le volume immergé.
-    -->
-    <plugin
-      filename="gz-sim-buoyancy-system"
-      name="gz::sim::systems::Buoyancy">
-      <!-- uniform_fluid_level : surface de l'eau à z=0.
-           Tout volume du bateau sous z=0 subit la poussée d'Archimède.
-           Le BuoyancyPlugin calcule automatiquement le volume immergé
-           depuis la géométrie de collision du modèle (boîte 1.5×0.6×0.2m).
-
-           Vérification de la flottaison pour hull 1.5×0.6×0.2m, masse=10kg :
-             Volume total = 1.5 × 0.6 × 0.2 = 0.18 m³
-             Masse eau déplacée à 50% imm. = 0.09 × 1000 = 90 kg
-             Force flottaison = 90 × 9.81 = 882 N >> gravité (98 N)
-           → Équilibre atteint avec ~11% du volume immergé (2.2 cm) -->
-      <uniform_fluid_level>0.0</uniform_fluid_level>
-      <!-- Densité de l'eau douce en kg/m³ — nécessaire pour le calcul
-           de la force de flottaison (F = ρ × g × V_immergé) -->
-      <uniform_fluid_density>1000</uniform_fluid_density>
-    </plugin>
+    <!-- BuoyancyPlugin supprimé — il requiert des géométries <collision> pour
+         calculer le volume immergé. Comme les collisions ont été retirées du
+         modèle bateau (pour éviter le crash ODE INTERNAL ERROR in collide()),
+         la flottaison est désormais gérée par <gravity>false</gravity> sur le
+         hull, qui annule la gravité et maintient le bateau à sa position z. -->
 
     <!--
       =====================================================

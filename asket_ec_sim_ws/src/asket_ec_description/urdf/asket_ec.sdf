@@ -109,22 +109,22 @@
         </material>
       </visual>
 
-      <!-- PAS de <collision> sur le hull — la flottaison est gérée par
-           le BuoyancyPlugin via le volume du <visual>, pas via les collisions.
-           Supprimer la collision élimine les auto-collisions hull/thruster
-           qui provoquaient le crash "ODE INTERNAL ERROR in collide()" sous DART. -->
+      <!-- PAS de <collision> — supprimé pour éviter le crash ODE INTERNAL ERROR.
+           Le BuoyancyPlugin nécessite <collision> pour calculer la poussée
+           d'Archimède, mais comme on n'a plus de collisions, la flottaison
+           est remplacée par <gravity>false</gravity> ci-dessous. -->
 
-      <!--
-        VELOCITY DECAY — Amortissement linéaire et angulaire
-        Remplace temporairement le HydrodynamicsPlugin (désactivé pour
-        compatibilité DART/WSL2).
+      <!-- FLOTTAISON : désactiver la gravité sur le hull.
+           Equivalent fonctionnel à une poussée d'Archimède parfaite :
+           le bateau reste à sa position z initiale (0.15 m) sans chuter.
+           Force nette = 0 (gravité annulée), ce qui simule l'équilibre
+           flottaison/gravité pour un bateau en mer calme.
+           Le BuoyancyPlugin du world est inutile avec cette approche. -->
+      <gravity>false</gravity>
 
-        linear  0.3 : freine la translation (surge, sway, heave)
-        angular 0.5 : freine les rotations (roll, pitch, yaw)
-
-        Ces valeurs sont un amortissement proportionnel à la vitesse (F = -k×v),
-        similaire à la résistance linéaire de l'eau à faible vitesse.
-      -->
+      <!-- VELOCITY DECAY — Amortissement pour simuler la résistance de l'eau.
+           linear  0.8 : freine la translation (surge, sway, heave)
+           angular 0.9 : freine les rotations (roll, pitch, yaw) -->
       <velocity_decay>
         <linear>0.8</linear>
         <angular>0.9</angular>
