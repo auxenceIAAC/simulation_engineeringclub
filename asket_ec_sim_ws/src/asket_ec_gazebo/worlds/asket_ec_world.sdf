@@ -152,32 +152,66 @@
 
     <!--
       =====================================================
-      PLAN D'EAU (GROUND PLANE)
+      FOND MARIN (GROUND PLANE) — z=-2.0
       =====================================================
-      Un plan infini qui représente la surface de l'eau.
-      Visuellement bleu, positionné à z=0 (niveau de la mer).
+      Plan représentant le fond marin, positionné à 2m sous la surface.
 
-      Dans la réalité, nous aurions un plugin "waves" pour simuler les vagues,
-      mais pour commencer, un plan plat suffit.
+      CRITIQUE : Ce plan N'A PAS de bloc <collision>.
+      Le crash "ODE INTERNAL ERROR in collide()" sous DART survient quand
+      le moteur de collision ODE rencontre le plan infini du sol. En
+      supprimant la collision et en descendant le plan à z=-2.0, on
+      élimine tout contact possible entre la coque et le sol.
+
+      La physique de flottaison est gérée exclusivement par le BuoyancyPlugin
+      (poussée d'Archimède), sans contact physique entre la coque et un plan.
     -->
-    <model name="water_plane">
-      <static>true</static>  <!-- Statique = ne bouge pas, ne consomme pas de CPU -->
+    <model name="ground_plane">
+      <static>true</static>
+      <pose>0 0 -2.0 0 0 0</pose>   <!-- z=-2.0 : fond marin, 2m sous la surface -->
+      <link name="ground_link">
+        <!-- PAS de bloc <collision> — seul le visuel est rendu.
+             Cela évite le crash GzOdeCollisionDetector en DART. -->
+        <visual name="ground_visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.3 0.2 0.1 1.0</ambient>   <!-- Sable brun -->
+            <diffuse>0.4 0.3 0.15 1.0</diffuse>
+            <specular>0.1 0.1 0.1 1.0</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!--
+      =====================================================
+      SURFACE DE L'EAU — z=0
+      =====================================================
+      Plan visuel semi-transparent représentant la surface de l'eau.
+      Pas de collision — la flottaison est gérée par le BuoyancyPlugin.
+    -->
+    <model name="water_surface">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>   <!-- z=0 : surface de l'eau -->
       <link name="water_link">
         <visual name="water_visual">
           <geometry>
             <plane>
-              <normal>0 0 1</normal>    <!-- Normale vers le haut = plan horizontal -->
-              <size>50 50</size>         <!-- 50m × 50m — taille réduite pour limiter la charge de collision -->
+              <normal>0 0 1</normal>
+              <size>100 100</size>
             </plane>
           </geometry>
           <material>
-            <ambient>0.0 0.2 0.5 0.8</ambient>   <!-- Bleu semi-transparent -->
-            <diffuse>0.0 0.3 0.7 0.8</diffuse>
-            <specular>0.8 0.8 0.8 1.0</specular> <!-- Reflets brillants sur l'eau -->
+            <ambient>0.0 0.2 0.5 0.6</ambient>   <!-- Bleu semi-transparent -->
+            <diffuse>0.0 0.3 0.7 0.6</diffuse>
+            <specular>0.8 0.8 0.8 1.0</specular>
           </material>
         </visual>
-        <!-- Pas de collision sur l'eau — la physique de flottaison est gérée
-             par le BuoyancyPlugin, pas par des collisions avec ce plan -->
+        <!-- Pas de collision — évite tout contact avec la coque -->
       </link>
     </model>
 
