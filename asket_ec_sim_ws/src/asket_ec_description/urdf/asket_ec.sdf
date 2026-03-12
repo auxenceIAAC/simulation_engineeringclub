@@ -303,13 +303,24 @@
          - prismatic : translation sur un axe (comme un piston)
          - ball : rotule (rotation libre dans toutes directions)
     -->
-    <!-- Joint FIXED : thruster rigidement attaché à la coque.
-         Changé de "revolute" en "fixed" pour éviter que le joint tourne
-         librement (sans collision pour le contraindre) et fasse basculer
-         le hull via les couples de réaction. -->
-    <joint name="thruster_port_joint" type="fixed">
+    <!-- Joint revolute requis par ThrusterPlugin (segfault sinon dans JointAxis::Xyz).
+         Le damping=1.0 sur l'axe amortit les rotations libres du joint. -->
+    <joint name="thruster_port_joint" type="revolute">
       <parent>hull</parent>
       <child>thruster_port</child>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-1e10</lower>
+          <upper>1e10</upper>
+          <effort>1000</effort>
+          <velocity>10000</velocity>
+        </limit>
+        <dynamics>
+          <damping>1.0</damping>
+          <friction>0.0</friction>
+        </dynamics>
+      </axis>
     </joint>
 
     <!-- =====================================================
@@ -356,10 +367,23 @@
       </velocity_decay>
     </link>
 
-    <!-- Joint FIXED : même raison que thruster_port_joint -->
-    <joint name="thruster_starboard_joint" type="fixed">
+    <!-- Joint revolute requis par ThrusterPlugin — même config que thruster_port -->
+    <joint name="thruster_starboard_joint" type="revolute">
       <parent>hull</parent>
       <child>thruster_starboard</child>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-1e10</lower>
+          <upper>1e10</upper>
+          <effort>1000</effort>
+          <velocity>10000</velocity>
+        </limit>
+        <dynamics>
+          <damping>1.0</damping>
+          <friction>0.0</friction>
+        </dynamics>
+      </axis>
     </joint>
 
     <!-- =====================================================
@@ -433,7 +457,8 @@
       <fluid_density>1000</fluid_density>             <!-- ρ eau douce -->
       <propeller_diameter>0.08</propeller_diameter>   <!-- D = 8 cm -->
       <velocity_control>true</velocity_control>
-      <!-- Le topic sur lequel écouter les commandes -->
+      <max_thrust_cmd>1000</max_thrust_cmd>   <!-- N, limite haute de commande -->
+      <min_thrust_cmd>-1000</min_thrust_cmd>  <!-- N, limite basse (marche arrière) -->
       <topic>/asket_ec/thruster/port/cmd</topic>
     </plugin>
 
@@ -452,6 +477,8 @@
       <fluid_density>1000</fluid_density>
       <propeller_diameter>0.08</propeller_diameter>
       <velocity_control>true</velocity_control>
+      <max_thrust_cmd>1000</max_thrust_cmd>
+      <min_thrust_cmd>-1000</min_thrust_cmd>
       <topic>/asket_ec/thruster/starboard/cmd</topic>
     </plugin>
 
