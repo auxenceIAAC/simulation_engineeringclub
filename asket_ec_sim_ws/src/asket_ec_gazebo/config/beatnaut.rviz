@@ -1,0 +1,211 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 78
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /RobotModel1
+        - /TF1
+        - /TrajectoireGPS1
+        - /IMU1
+      Splitter Ratio: 0.5
+    Tree Height: 549
+  - Class: rviz_common/Views
+    Collapsed: false
+    Name: Views
+    Saved: ~
+
+Visualization Manager:
+  Class: ""
+  Displays:
+
+    # ---------------------------------------------------------
+    # Grille de référence
+    # Affiche une grille sur le plan XY pour s'orienter dans l'espace.
+    # ---------------------------------------------------------
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Name: Grille
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Value: true
+
+    # ---------------------------------------------------------
+    # Modèle 3D du bateau (RobotModel)
+    # Lit la description URDF/SDF depuis le topic /robot_description
+    # publié par robot_state_publisher.
+    # ---------------------------------------------------------
+    - Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+
+    # ---------------------------------------------------------
+    # Axes de référence TF (Transform Frame 2)
+    # Affiche les repères de toutes les pièces du robot :
+    # base_link, capteur GPS, IMU, hélices...
+    # Permet de vérifier que les transformations sont correctes.
+    # ---------------------------------------------------------
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 0.5
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree: {}
+      Update Interval: 0
+      Value: true
+
+    # ---------------------------------------------------------
+    # Trajectoire GPS (Path)
+    # Affiche le chemin parcouru par le bateau.
+    # Topic : /asket_ec/path (nav_msgs/msg/Path)
+    # Ce topic est publié par un nœud convertisseur odometry → path.
+    # ---------------------------------------------------------
+    - Buffer Length: 1000
+      Class: rviz_default_plugins/Path
+      Color: 0; 255; 0
+      Enabled: true
+      Head Diameter: 0.3
+      Head Length: 0.2
+      Length: 0.3
+      Line Style: Lines
+      Line Width: 0.03
+      Name: TrajectoireGPS
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.03
+      Shaft Diameter: 0.1
+      Shaft Length: 0.1
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /asket_ec/path
+      Value: true
+
+    # ---------------------------------------------------------
+    # Données IMU — Orientation du bateau
+    # Affiche un cube représentant l'orientation de la centrale
+    # inertielle (roulis, tangage, cap).
+    # Topic : /asket_ec/imu (sensor_msgs/msg/Imu)
+    # Plugin requis : ros-humble-rviz-imu-plugin
+    # ---------------------------------------------------------
+    - Class: rviz_imu_plugin/Imu
+      Enabled: true
+      Name: IMU
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /asket_ec/imu
+      Value: true
+      box_scale: 1
+      color_a: 0.5
+      color_b: 0
+      color_g: 1
+      color_r: 0
+      enable_acceleration: false
+      enable_box: true
+
+  Enabled: true
+
+  Global Options:
+    Background Color: 48; 48; 48
+    # Fixed Frame : repère de référence global.
+    # "odom" = référentiel odométrique (position initiale = origine).
+    Fixed Frame: odom
+    Frame Rate: 30
+
+  Name: root
+
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+
+  Value: true
+
+  Views:
+    Current:
+      # Vue orbite : clic gauche pour tourner, molette pour zoomer
+      Class: rviz_default_plugins/Orbit
+      Distance: 15
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.06
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.01
+      Pitch: 0.6
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
+      Yaw: 0.8
+    Saved: ~
+
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 841
+  Hide Left Dock: false
+  Hide Right Dock: false
+  Views:
+    collapsed: false
+  Width: 1280
+  X: 0
+  Y: 0

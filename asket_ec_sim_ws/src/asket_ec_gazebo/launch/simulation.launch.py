@@ -33,7 +33,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, TimerAction
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -111,27 +111,34 @@ def generate_launch_description():
     #
     # Pour Gazebo Harmonic, la variable d'environnement GZ_VERSION=harmonic
     # peut être nécessaire selon ton installation.
+    # Variables d'environnement communes aux deux modes Gazebo
+    gz_env = {
+        # GZ_SIM_RESOURCE_PATH : dit à Gazebo où chercher les modèles
+        'GZ_SIM_RESOURCE_PATH': ':'.join(
+            os.path.join(p, 'share')
+            for p in os.environ.get('AMENT_PREFIX_PATH', '').split(':')
+            if p
+        ),
+        # Rendu logiciel (CPU) pour WSL2 (pas de GPU OpenGL)
+        'LIBGL_ALWAYS_SOFTWARE': '1',
+        'MESA_GL_VERSION_OVERRIDE': '3.3',
+    }
+
+    # Mode GUI (fenêtre graphique) — lancé si headless:=false (défaut)
     gazebo = ExecuteProcess(
-        cmd=[
-            'gz', 'sim',
-            '-r',               # Démarrer la simulation immédiatement
-            world_file,         # Charger notre monde asket_ec_world.sdf
-        ],
-        output='screen',        # Afficher les logs Gazebo dans le terminal
-        additional_env={
-            # GZ_SIM_RESOURCE_PATH : dit à Gazebo où chercher les modèles
-            # On construit le chemin à partir de tous les préfixes AMENT pour
-            # que package://asket_ec_description/... soit résolu correctement.
-            'GZ_SIM_RESOURCE_PATH': ':'.join(
-                os.path.join(p, 'share')
-                for p in os.environ.get('AMENT_PREFIX_PATH', '').split(':')
-                if p
-            ),
-            # Rendu logiciel (CPU) : nécessaire sous WSL2 qui n'a pas
-            # toujours un driver OpenGL fonctionnel pour Gazebo.
-            'LIBGL_ALWAYS_SOFTWARE': '1',
-            'MESA_GL_VERSION_OVERRIDE': '3.3',
-        }
+        cmd=['gz', 'sim', '-r', world_file],
+        output='screen',
+        additional_env=gz_env,
+        condition=UnlessCondition(LaunchConfiguration('headless')),
+    )
+
+    # Mode headless (serveur uniquement) — lancé si headless:=true
+    # -s = server only, pas de rendu graphique. Idéal pour WSL2/CI.
+    gazebo_headless = ExecuteProcess(
+        cmd=['gz', 'sim', '-r', '-s', world_file],
+        output='screen',
+        additional_env=gz_env,
+        condition=IfCondition(LaunchConfiguration('headless')),
     )
 
     # =========================================================
@@ -202,7 +209,8 @@ def generate_launch_description():
     return LaunchDescription([
         headless_arg,
         use_sim_time_arg,
-        gazebo,
+        gazebo,           # Gazebo avec GUI (si headless:=false)
+        gazebo_headless,  # Gazebo sans GUI / -s (si headless:=true)
         robot_state_publisher,
         ros_gz_bridge,
         spawn_robot,
