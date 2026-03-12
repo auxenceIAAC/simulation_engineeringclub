@@ -105,7 +105,7 @@
       Tout ce qui est en-dessous de fluid_level = 0 est considéré comme immergé.
 
       fluid_level = 0.0 : la surface de l'eau est au niveau z=0 du monde.
-      Notre bateau démarre à z=0.05, donc sa moitié inférieure est dans l'eau.
+      Notre bateau démarre à z=0.1, donc sa moitié inférieure est dans l'eau.
 
       Note : Ce plugin doit aussi être au niveau du monde (pas seulement du modèle)
       pour calculer correctement le volume immergé.
@@ -113,7 +113,10 @@
     <plugin
       filename="gz-sim-buoyancy-system"
       name="gz::sim::systems::Buoyancy">
-      <uniform_fluid_density>1000</uniform_fluid_density>
+      <!-- uniform_fluid_level : hauteur z de la surface de l'eau (0 = niveau de la mer).
+           Tout volume du bateau sous z=0 subit une force de flottaison vers le haut.
+           Valeur explicite requise pour éviter que le bateau tombe à travers l'eau. -->
+      <uniform_fluid_level>0.0</uniform_fluid_level>
     </plugin>
 
     <!--

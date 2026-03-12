@@ -197,7 +197,7 @@ def generate_launch_description():
             arguments=[
                 '-file', robot_sdf_file,
                 '-name', 'asket_ec',
-                '-x', '0', '-y', '0', '-z', '0.05',
+                '-x', '0', '-y', '0', '-z', '0.1',
             ],
             output='screen',
         )]
