@@ -208,10 +208,8 @@
             </z>
           </linear_acceleration>
         </imu>
-        <plugin filename="gz-sim-imu-system"
-                name="gz::sim::systems::Imu">
-        </plugin>
-        <!-- Topic Gazebo où les données IMU seront publiées -->
+        <!-- Le système IMU est activé au niveau du monde (gz-sim-imu-system).
+             Ne pas redéclarer le plugin ici — doublon qui bloque la publication. -->
         <topic>/asket_ec/imu</topic>
       </sensor>
 
@@ -253,10 +251,8 @@
             </horizontal>
           </velocity_sensing>
         </navsat>
-        <plugin filename="gz-sim-navsat-system"
-                name="gz::sim::systems::NavSat">
-        </plugin>
-        <!-- Topic Gazebo où les données GPS seront publiées -->
+        <!-- Le système NavSat est activé au niveau du monde (gz-sim-navsat-system).
+             Ne pas redéclarer le plugin ici — doublon qui bloque la publication. -->
         <topic>/asket_ec/navsat</topic>
       </sensor>
 

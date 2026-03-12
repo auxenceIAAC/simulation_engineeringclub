@@ -66,8 +66,13 @@ def generate_launch_description():
     # Fichier SDF du monde Gazebo
     world_file = os.path.join(pkg_asket_ec_gazebo, 'worlds', 'asket_ec_world.sdf')
 
-    # Fichier SDF du modèle du bateau
+    # Fichier SDF du modèle du bateau — utilisé pour spawner dans Gazebo
     robot_sdf_file = os.path.join(pkg_asket_ec_description, 'urdf', 'asket_ec.sdf')
+
+    # Fichier URDF minimal — utilisé par robot_state_publisher pour les TF
+    # (le SDF complet n'est pas compatible avec sdformat_urdf quand il contient
+    # une balise <pose> au niveau <model>)
+    robot_urdf_file = os.path.join(pkg_asket_ec_description, 'urdf', 'asket_ec.urdf')
 
     # Fichier de configuration du bridge
     bridge_config_file = os.path.join(pkg_asket_ec_gazebo, 'config', 'ros_gz_bridge.yaml')
@@ -93,10 +98,12 @@ def generate_launch_description():
     )
 
     # =========================================================
-    # ÉTAPE 4 : Lire le contenu du fichier SDF du robot
+    # ÉTAPE 4 : Lire le contenu URDF pour robot_state_publisher
     # =========================================================
-    # robot_state_publisher a besoin du contenu XML du SDF (pas juste le chemin)
-    with open(robot_sdf_file, 'r') as f:
+    # robot_state_publisher a besoin du contenu XML (pas juste le chemin).
+    # On utilise l'URDF minimal (pas le SDF) car sdformat_urdf ne supporte pas
+    # la balise <pose> au niveau <model> → crash "not currently supported".
+    with open(robot_urdf_file, 'r') as f:
         robot_description_content = f.read()
 
     # =========================================================

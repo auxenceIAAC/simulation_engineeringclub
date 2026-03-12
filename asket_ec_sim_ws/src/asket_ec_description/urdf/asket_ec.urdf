@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<!--
+  asket_ec.urdf — Description URDF minimale du bateau pour robot_state_publisher
+
+  =========================================================
+  POURQUOI UN FICHIER URDF SÉPARÉ DU SDF ?
+  =========================================================
+  Gazebo utilise le fichier SDF (asket_ec.sdf) pour la simulation physique :
+  flottaison, propulsion, capteurs, collisions.
+
+  robot_state_publisher utilise ce fichier URDF pour publier les
+  transformations TF2 (positions relatives des pièces du robot).
+  Ces TF sont lus par RViz2 pour afficher le modèle 3D.
+
+  Problème : sdformat_urdf (le convertisseur SDF→URDF) ne supporte pas
+  la balise <pose> au niveau <model>, ce qui fait crasher robot_state_publisher.
+  Solution : un URDF propre, sans physique ni pose globale.
+
+  Ce fichier contient UNIQUEMENT :
+  - La structure des liens (géométrie pour RViz2)
+  - Les joints (connexions entre pièces)
+  Pas de capteurs, pas de plugins Gazebo, pas de pose globale.
+
+  CONVENTION DE NOMMAGE :
+  - URDF utilise "base_link" comme lien racine (convention ROS standard)
+  - SDF utilise "hull" comme lien principal
+  Les deux coexistent sans conflit : chacun est utilisé par son propre outil.
+-->
+<robot name="asket_ec">
+
+  <!-- =====================================================
+       LINK : BASE_LINK (COQUE PRINCIPALE)
+       =====================================================
+       Lien racine du robot — toujours nommé "base_link" par convention ROS.
+       Représente la coque du bateau (1.50m × 0.60m × 0.20m).
+  -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="1.50 0.60 0.20"/>
+      </geometry>
+      <material name="blue_hull">
+        <color rgba="0.0 0.4 0.9 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="1.50 0.60 0.20"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <!-- Moments d'inertie d'une boîte 1.5×0.6×0.2 de 10kg -->
+      <inertia ixx="0.367" ixy="0" ixz="0"
+               iyy="1.908" iyz="0"
+               izz="2.175"/>
+    </inertial>
+  </link>
+
+  <!-- =====================================================
+       LINK : THRUSTER PORT (MOTEUR GAUCHE)
+       =====================================================
+       Propulseur gauche — cylindre représentant le tube + hélice.
+       Position : 70cm à l'arrière, 25cm à gauche, 5cm sous la flottaison.
+  -->
+  <link name="thruster_port">
+    <visual>
+      <geometry>
+        <cylinder radius="0.04" length="0.12"/>
+      </geometry>
+      <material name="yellow_thruster">
+        <color rgba="0.9 0.9 0.2 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- Joint fixe : le moteur est boulonné à la coque, pas de rotation relative -->
+  <joint name="thruster_port_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_port"/>
+    <!-- xyz = position relative (arrière, gauche, bas)
+         rpy = rotation 90° autour Y pour aligner l'axe du cylindre avec X -->
+    <origin xyz="-0.70 0.25 -0.05" rpy="0 1.5708 0"/>
+  </joint>
+
+  <!-- =====================================================
+       LINK : THRUSTER STARBOARD (MOTEUR DROIT)
+       =====================================================
+       Propulseur droit — miroir du moteur gauche (y négatif).
+  -->
+  <link name="thruster_starboard">
+    <visual>
+      <geometry>
+        <cylinder radius="0.04" length="0.12"/>
+      </geometry>
+      <material name="yellow_thruster">
+        <color rgba="0.9 0.9 0.2 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="thruster_starboard_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_starboard"/>
+    <origin xyz="-0.70 -0.25 -0.05" rpy="0 1.5708 0"/>
+  </joint>
+
+</robot>
