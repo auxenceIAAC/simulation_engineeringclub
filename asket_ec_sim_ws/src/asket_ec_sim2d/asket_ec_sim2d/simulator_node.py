@@ -27,7 +27,7 @@ Formules à chaque pas de temps dt = 0.02s (50 Hz) :
   v_starboard = linear.x - (L/2) * angular.z   -- thruster tribord
 
   acceleration = (v_port + v_starboard) / 2    -- poussée nette
-  drag         = -0.3 * speed                  -- résistance eau (Stokes)
+  drag         = -3.0 * speed                  -- résistance eau (Stokes)
 
   speed   += (acceleration + drag) * dt        -- intégration Euler
   heading += angular.z * dt                    -- cap (rad)
@@ -59,10 +59,11 @@ import math
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, TransformStamped
 from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import NavSatFix, NavSatStatus
 from geometry_msgs.msg import Twist
+from tf2_ros import TransformBroadcaster
 
 # Origine GPS : port de Barcelone
 ORIGIN_LAT = 41.3851   # degrés Nord
@@ -120,6 +121,13 @@ class Sim2DNode(Node):
             NavSatFix, '/sim2d/navsat', 10)
 
         # =========================================================
+        # BROADCASTER TF2 — odom → base_link
+        # =========================================================
+        # Sans cette transform, RViz2 affiche une erreur orange sur Fixed Frame
+        # car il ne sait pas où est base_link par rapport à odom.
+        self.tf_broadcaster = TransformBroadcaster(self)
+
+        # =========================================================
         # TIMER 50 Hz
         # =========================================================
         self.dt = 0.02  # secondes
@@ -156,8 +164,10 @@ class Sim2DNode(Node):
         # Accélération nette = moyenne des deux thrusters
         acceleration = (v_port + v_starboard) / 2.0
 
-        # Traînée visqueuse (résistance de l'eau)
-        drag = -0.3 * self.speed
+        # Traînée visqueuse (résistance de l'eau).
+        # Coefficient 3.0 : vitesse plafonne à ~0.33 m/s pour linear.x=1.0
+        # (évite d'atteindre 139m en quelques minutes avec 0.3)
+        drag = -3.0 * self.speed
 
         # --- Intégration Euler ---
         self.speed += (acceleration + drag) * dt
@@ -182,6 +192,20 @@ class Sim2DNode(Node):
         pose.pose.orientation.y = 0.0
         pose.pose.orientation.z = qz
         pose.pose.orientation.w = qw
+
+        # --- Publier la transform TF odom → base_link ---
+        t = TransformStamped()
+        t.header.stamp = now
+        t.header.frame_id = 'odom'
+        t.child_frame_id = 'base_link'
+        t.transform.translation.x = self.x
+        t.transform.translation.y = self.y
+        t.transform.translation.z = 0.0
+        t.transform.rotation.x = 0.0
+        t.transform.rotation.y = 0.0
+        t.transform.rotation.z = qz
+        t.transform.rotation.w = qw
+        self.tf_broadcaster.sendTransform(t)
 
         # --- Publier /sim2d/pose ---
         self.pub_pose.publish(pose)
