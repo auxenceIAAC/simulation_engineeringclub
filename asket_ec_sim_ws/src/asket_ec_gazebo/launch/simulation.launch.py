@@ -32,7 +32,7 @@ Cette fonction peut contenir :
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -178,18 +178,32 @@ def generate_launch_description():
     )
 
     # =========================================================
+    # COMPOSANT 4 : Spawn du robot dans Gazebo
+    # =========================================================
+    # On attend 3 secondes que Gazebo soit prêt, puis on spawne le bateau
+    # via ros_gz_sim/create — plus fiable que package:// URI dans le world SDF.
+    spawn_robot = TimerAction(
+        period=3.0,
+        actions=[Node(
+            package='ros_gz_sim',
+            executable='create',
+            arguments=[
+                '-file', robot_sdf_file,
+                '-name', 'asket_ec',
+                '-x', '0', '-y', '0', '-z', '0.05',
+            ],
+            output='screen',
+        )]
+    )
+
+    # =========================================================
     # ASSEMBLAGE : Retourner tous les composants
     # =========================================================
-    # LaunchDescription([...]) = liste de tout ce qu'on veut démarrer.
-    # ROS2 démarre tous les composants en parallèle (sauf si des dépendances
-    # sont spécifiées avec RegisterEventHandler).
     return LaunchDescription([
-        # Arguments (doivent être déclarés avant d'être utilisés)
         headless_arg,
         use_sim_time_arg,
-
-        # Processus et nœuds à démarrer
         gazebo,
         robot_state_publisher,
         ros_gz_bridge,
+        spawn_robot,
     ])

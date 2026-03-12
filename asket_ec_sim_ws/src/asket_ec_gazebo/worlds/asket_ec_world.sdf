@@ -168,26 +168,8 @@
       </link>
     </model>
 
-    <!--
-      =====================================================
-      MODÈLE DU BATEAU — INCLUDE
-      =====================================================
-      Au lieu de copier tout le SDF du bateau ici, on l'inclut depuis
-      asket_ec_description. C'est plus propre et maintenable.
-
-      uri : chemin vers le fichier SDF du bateau
-            "package://" est une convention ROS2 pour pointer vers
-            un fichier dans un package ROS2 installé.
-
-      pose : position et orientation initiale du bateau dans le monde
-             Format : x y z roll pitch yaw (en mètres et radians)
-             0.05 m de hauteur = légèrement au-dessus de l'eau au départ
-    -->
-    <include>
-      <uri>package://asket_ec_description/urdf/asket_ec.sdf</uri>
-      <name>asket_ec</name>
-      <pose>0 0 0.05 0 0 0</pose>
-    </include>
+    <!-- Le bateau est spawné depuis le launch file via ros_gz_sim/create
+         pour éviter les problèmes de résolution URI package:// dans WSL2 -->
 
   </world>
 </sdf>
