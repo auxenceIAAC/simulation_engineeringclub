@@ -1,373 +1,168 @@
-# Asket EC Simulation — ROS2/Gazebo Harmonic
+# Simulation Asket EC — Club d'Ingénierie
 
-Simulation complète du bateau autonome **Asket EC** avec ROS2 Jazzy et Gazebo Harmonic.
+## Vue d'ensemble
 
-```
-    ╔══════════════════════════════════════╗
-    ║    ████████ BEATNAUT ████████        ║
-    ║   ═══════════════════════════        ║
-    ║   [port]  ←1.50m→  [stbd]           ║
-    ║    🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊               ║
-    ╚══════════════════════════════════════╝
-```
-
----
-
-## Qu'est-ce que ce projet ?
-
-Ce repository contient un **workspace ROS2 complet** pour simuler le Asket EC,
-un catamaran télécommandé/autonome construit par un club d'ingénierie étudiant.
-
-**Le Asket EC physique :**
-- Catamaran de 1.50m × 0.60m, masse 10 kg
-- 2 propulseurs BLDC (contrôle différentiel, comme un tank)
-- GPS + IMU pour la navigation
-- ESP32 comme contrôleur embarqué
-- ROS2 Jazzy comme middleware robotique
-
-**Ce que simule ce projet :**
-- La physique hydrodynamique (flottaison d'Archimède + résistance de l'eau)
-- Les deux propulseurs avec physique réaliste (coefficient de poussée Kt)
-- Les capteurs IMU (orientation + accélération) et GPS (position géographique)
-- Le contrôle différentiel gauche/droite
+Simulateur 2D ROS2 du bateau Asket EC. Pas de Gazebo —
+simulateur Python pur à 50Hz, affiché dans RViz2.
+Architecture : simulateur physique + navigateur waypoints GPS.
 
 ---
 
 ## Prérequis
 
-### Logiciels requis
-
-| Logiciel | Version | Installation |
-|----------|---------|-------------|
-| Ubuntu | 24.04 LTS | — |
-| ROS2 | Jazzy Jalisco | [docs.ros.org](https://docs.ros.org/en/jazzy/Installation.html) |
-| Gazebo | Harmonic (8.x) | `sudo apt install gz-harmonic` |
-| ros_gz | jazzy | `sudo apt install ros-jazzy-ros-gz` |
-
-### Installation des dépendances ROS2
-
-```bash
-# Mettre à jour les sources
-sudo apt update
-
-# Installer ROS2 Jazzy (desktop complet)
-sudo apt install ros-jazzy-desktop
-
-# Installer Gazebo Harmonic
-sudo apt install gz-harmonic
-
-# Installer le bridge ROS2-Gazebo
-sudo apt install ros-jazzy-ros-gz
-
-# Installer les outils de build
-sudo apt install python3-colcon-common-extensions python3-rosdep
-
-# Initialiser rosdep (une seule fois)
-sudo rosdep init
-rosdep update
-```
+- Ubuntu 24.04 (ou WSL2)
+- ROS2 Jazzy installé
+- Python 3.12
 
 ---
 
-## Structure du projet
+## Installation
 
-```
-asket_ec_sim_ws/
-├── src/
-│   │
-│   ├── asket_ec_description/        # Package : MODÈLE du bateau
-│   │   ├── package.xml              # Dépendances ROS2 du package
-│   │   ├── CMakeLists.txt           # Instructions de build
-│   │   └── urdf/
-│   │       └── asket_ec.sdf         # ← FICHIER PRINCIPAL : modèle 3D + physique
-│   │                                #   Définit géométrie, masse, inertie,
-│   │                                #   capteurs (IMU/GPS), plugins physique
-│   │
-│   ├── asket_ec_gazebo/             # Package : SIMULATION Gazebo
-│   │   ├── package.xml
-│   │   ├── CMakeLists.txt
-│   │   ├── worlds/
-│   │   │   └── asket_ec_world.sdf   # Monde Gazebo : eau, soleil, bateau inclus
-│   │   ├── config/
-│   │   │   └── ros_gz_bridge.yaml   # Topics bridgés entre Gazebo et ROS2
-│   │   └── launch/
-│   │       ├── simulation.launch.py # Lance Gazebo + bridge
-│   │       └── asket_ec_full.launch.py  # ← POINT D'ENTRÉE PRINCIPAL
-│   │
-│   └── asket_ec_control/            # Package : CONTRÔLE des moteurs
-│       ├── package.xml
-│       ├── setup.py
-│       ├── asket_ec_control/
-│       │   └── differential_drive_node.py  # Nœud : /cmd_vel → propulseurs
-│       └── launch/
-│           └── control.launch.py    # Lance uniquement le contrôleur
-│
-├── build.sh                         # Script de compilation automatique
-└── README.md                        # Ce fichier
-```
-
----
-
-## Installation et build
-
-### 1. Cloner le repository
+### 1. Cloner le repo
 
 ```bash
-git clone https://github.com/auxenceIAAC/simulation_engineeringclub.git
+git clone https://github.com/auxenceIAAC/simulation_engineeringclub
 cd simulation_engineeringclub
 ```
 
-### 2. Compiler le workspace
+### 2. Builder le workspace
 
 ```bash
-# Méthode rapide (script automatique)
-bash asket_ec_sim_ws/build.sh
-
-# OU méthode manuelle
-source /opt/ros/jazzy/setup.bash
 cd asket_ec_sim_ws
-colcon build --symlink-install
+colcon build --packages-select asket_ec_sim2d
+source install/setup.bash
 ```
 
-### 3. Sourcer l'installation
-
-> **Important** : cette commande doit être exécutée dans **chaque nouveau terminal**
-> qui veut utiliser ce workspace.
+### 3. Installer les nœuds Python
 
 ```bash
-source asket_ec_sim_ws/install/setup.bash
-```
-
-**Astuce** : Ajoute cette ligne à ton `~/.bashrc` pour ne pas avoir à la retaper :
-```bash
-echo "source ~/simulation_engineeringclub/asket_ec_sim_ws/install/setup.bash" >> ~/.bashrc
+cd src/asket_ec_sim2d
+pip install -e . --break-system-packages
+cd ../../..
 ```
 
 ---
 
-## Lancer la simulation
+## Lancement
 
-### Simulation complète (Gazebo + contrôleur)
-
-```bash
-ros2 launch asket_ec_gazebo asket_ec_full.launch.py
-```
-
-Cela démarre :
-1. **Gazebo Harmonic** avec le monde asket_ec_world.sdf
-2. **robot_state_publisher** (transformations TF2)
-3. **ros_gz_bridge** (bridge ROS2 <-> Gazebo)
-4. **differential_drive_controller** (après 3s de délai)
-
-### Simulation Gazebo seulement (sans contrôleur)
+Le projet nécessite 3 terminaux. Dans chaque terminal,
+sourcer ROS2 d'abord :
 
 ```bash
-ros2 launch asket_ec_gazebo simulation.launch.py
+source /opt/ros/jazzy/setup.bash
 ```
 
-### Contrôleur seulement (si Gazebo tourne déjà)
+### Terminal 1 — Simulateur physique
 
 ```bash
-ros2 launch asket_ec_control control.launch.py
+~/.local/bin/simulator_node
 ```
 
-### Mode headless (sans interface graphique, pour serveurs)
+Publie à 50Hz :
+- `/sim2d/pose` — position et cap du bateau (`PoseStamped`)
+- `/sim2d/path` — trajectoire complète (`Path`)
+- `/sim2d/odom` — odométrie (`Odometry`)
+- `/sim2d/navsat` — GPS simulé ancré sur Barcelone (`NavSatFix`)
+
+Souscrit à :
+- `/cmd_vel` — commandes de vitesse (`Twist`)
+
+### Terminal 2 — Navigateur waypoints (mode automatique)
 
 ```bash
-ros2 launch asket_ec_gazebo asket_ec_full.launch.py headless:=true
+~/.local/bin/waypoint_navigator_node
 ```
+
+Lit les waypoints depuis :
+```
+asket_ec_sim_ws/src/asket_ec_sim2d/config/waypoints.yaml
+```
+
+Comportement :
+- Trie les waypoints du plus proche au plus éloigné
+- Dirige le bateau vers chaque waypoint via pure pursuit
+- Passe au waypoint suivant quand le bateau est à moins de 2m
+- Publie `/cmd_vel` automatiquement
+
+Format `waypoints.yaml` :
+
+```yaml
+waypoints:
+  - {lat: 41.3851, lon: 2.1734}
+  - {lat: 41.3860, lon: 2.1750}
+```
+
+### Terminal 3 — Visualisation RViz2
+
+```bash
+rviz2 -d ~/simulation_engineeringclub/asket_ec_sim_ws/src/asket_ec_sim2d/config/sim2d.rviz
+```
+
+Affiche :
+- Trajectoire réelle du bateau en vert (`/sim2d/path`)
+- Plan de route waypoints en rouge (`/waypoints/path`)
+- Pose actuelle du bateau (`/sim2d/pose`)
+- Grille de référence (Fixed Frame : `odom`)
 
 ---
 
-## Contrôler le bateau
+## Contrôle manuel
 
-### Commandes de base
+Pour contrôler manuellement le bateau (remplace le Terminal 2) :
 
 ```bash
-# Faire avancer le bateau à 0.5 m/s
 ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" --once
-
-# Faire reculer
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: -0.3}}" --once
-
-# Tourner à gauche (angular.z positif)
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.3}, angular: {z: 0.5}}" --once
-
-# Tourner à droite (angular.z négatif)
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.3}, angular: {z: -0.5}}" --once
-
-# Rotation sur place à gauche (v=0, w>0)
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.0}, angular: {z: 1.0}}" --once
-
-# ARRET D'URGENCE
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{}" --once
+  "{linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" \
+  --rate 10
 ```
 
-### Contrôle direct des propulseurs
+Paramètres :
+- `linear.x` : avance (positif) / recule (négatif), max ≈ 1.0
+- `angular.z` : tourne à gauche (positif) / droite (négatif), max ≈ 1.0
 
-```bash
-# Propulseur gauche (port) à 150 rad/s
-ros2 topic pub /asket_ec/thruster/port/cmd std_msgs/msg/Float64 "{data: 150.0}" --once
+---
 
-# Propulseur droit (starboard) à 150 rad/s
-ros2 topic pub /asket_ec/thruster/starboard/cmd std_msgs/msg/Float64 "{data: 150.0}" --once
+## Architecture technique
+
+### Physique du bateau
+
+- Propulsion différentielle (2 thrusters)
+- Écartement moteurs : 0.5m
+- Drag coefficient : 3.0 (résistance eau)
+- Fréquence simulation : 50Hz
+- Origine GPS : 41.3851°N, 2.1734°E (Barcelone)
+
+### Algorithme de navigation (pure pursuit simplifié)
+
+```
+angle_error = angle_vers_waypoint - cap_actuel
+angular.z = 2.0 * sin(angle_error)
+linear.x  = 0.5 * cos(angle_error)
+```
+
+### Structure du repo
+
+```
+simulation_engineeringclub/
+└── asket_ec_sim_ws/
+    └── src/
+        └── asket_ec_sim2d/
+            ├── asket_ec_sim2d/
+            │   ├── simulator_node.py           # physique 50Hz
+            │   └── waypoint_navigator_node.py  # navigation GPS
+            ├── config/
+            │   ├── waypoints.yaml              # points GPS cibles
+            │   └── sim2d.rviz                  # config RViz2
+            ├── launch/
+            │   └── sim2d.launch.py
+            ├── setup.cfg
+            └── package.xml
 ```
 
 ---
 
-## Lire les données capteurs
+## Prochaines étapes
 
-```bash
-# Données GPS en temps réel (position lat/lon/alt)
-ros2 topic echo /asket_ec/navsat
-
-# Données IMU (orientation + accélération)
-ros2 topic echo /asket_ec/imu
-
-# Position et orientation du bateau dans le monde
-ros2 topic echo /asket_ec/pose
-
-# Odométrie estimée
-ros2 topic echo /asket_ec/odometry
-
-# Voir tous les topics actifs
-ros2 topic list
-
-# Voir la fréquence d'un topic
-ros2 topic hz /asket_ec/imu
-ros2 topic hz /asket_ec/navsat
-```
-
----
-
-## Architecture logicielle
-
-```
-+------------------------------------------------------------------+
-|                    WORKSPACE ROS2 BEATNAUT                        |
-|                                                                   |
-|  +-----------------+         +-----------------------------+     |
-|  |  Teleop         |         |    Gazebo Harmonic           |     |
-|  |  (clavier/joy)  |         |                             |     |
-|  +--------+--------+         |  +---------------------+   |     |
-|           |  /cmd_vel        |  |  Modele Asket EC     |   |     |
-|           v                  |  |  - BuoyancyPlugin   |   |     |
-|  +-----------------+         |  |  - HydroPlugin      |   |     |
-|  |  Differential   |         |  |  - ThrusterPlugin   |   |     |
-|  |  Drive Node     |         |  |  - IMU Sensor       |   |     |
-|  +--+----------+---+         |  |  - GPS Sensor       |   |     |
-|     |          |             |  +---------------------+   |     |
-|     | port/cmd | stbd/cmd    +-------------+---------------+     |
-|     v          v                           |                     |
-|  +----------------------+  <--------------+                     |
-|  |   ros_gz_bridge      |  /asket_ec/imu                        |
-|  |  (ROS2 <-> Gazebo)   |  /asket_ec/navsat                     |
-|  +----------------------+  /asket_ec/thruster/*/cmd             |
-|           |                                                      |
-|           v                                                      |
-|  +----------------------+                                       |
-|  | robot_state_pub      | -> /tf, /tf_static                    |
-|  +----------------------+                                       |
-+------------------------------------------------------------------+
-```
-
----
-
-## Topics ROS2
-
-| Topic | Type | Direction | Description |
-|-------|------|-----------|-------------|
-| `/cmd_vel` | `geometry_msgs/Twist` | Entree | Commande de vitesse du bateau |
-| `/asket_ec/thruster/port/cmd` | `std_msgs/Float64` | Sortie -> Gazebo | Commande propulseur gauche (rad/s) |
-| `/asket_ec/thruster/starboard/cmd` | `std_msgs/Float64` | Sortie -> Gazebo | Commande propulseur droit (rad/s) |
-| `/asket_ec/imu` | `sensor_msgs/Imu` | Gazebo -> ROS2 | Donnees IMU (orientation + accel.) |
-| `/asket_ec/navsat` | `sensor_msgs/NavSatFix` | Gazebo -> ROS2 | Position GPS (lat/lon/alt) |
-| `/asket_ec/pose` | `geometry_msgs/PoseStamped` | Gazebo -> ROS2 | Position precise dans le monde |
-| `/asket_ec/odometry` | `nav_msgs/Odometry` | Gazebo -> ROS2 | Odometrie estimee |
-| `/clock` | `rosgraph_msgs/Clock` | Gazebo -> ROS2 | Horloge de simulation |
-| `/tf` | `tf2_msgs/TFMessage` | robot_state_pub | Transformations entre les liens |
-
----
-
-## Physique de la simulation
-
-### Flottabilite (BuoyancyPlugin)
-```
-F_flottaison = rho_eau x V_immerge x g
-             = 1000 x V x 9.81
-```
-Le bateau flotte quand `F_flottaison = F_gravite = m x g`.
-
-### Resistance hydrodynamique (HydrodynamicsPlugin)
-```
-F_resistance = -xDotU x v  -  xUU x v x |v|
-                 lineaire         quadratique
-```
-
-### Poussee des helices (ThrusterPlugin)
-```
-F_poussee = Kt x rho x n^2 x D^4
-           = 0.004 x 1000 x n^2 x 0.08^4
-```
-Ou `n` est la vitesse angulaire de l'helice en rad/s.
-
-### Controle differentiel
-```
-v_port      = v + (L/2) x omega    # Moteur gauche
-v_starboard = v - (L/2) x omega    # Moteur droit
-```
-Ou `L = 0.50 m` (ecartement des moteurs).
-
----
-
-## Depannage
-
-### "gz: command not found"
-```bash
-# Verifier l'installation de Gazebo Harmonic
-which gz
-# Si absent : sudo apt install gz-harmonic
-```
-
-### "Package 'asket_ec_gazebo' not found"
-```bash
-# Tu as oublie de sourcer l'installation
-source asket_ec_sim_ws/install/setup.bash
-```
-
-### Le bridge ne demarre pas
-```bash
-# Verifier que ros_gz_bridge est installe
-ros2 pkg list | grep ros_gz_bridge
-# Si absent : sudo apt install ros-jazzy-ros-gz
-```
-
-### La simulation est tres lente (< 0.5x real time)
-- Reduire la resolution graphique dans Gazebo
-- Utiliser le mode headless : `headless:=true`
-- Augmenter `max_step_size` dans `asket_ec_world.sdf` (reduit la precision)
-
----
-
-## Pour aller plus loin
-
-- **Ajouter la navigation autonome** : integrer Nav2 avec une carte de la zone
-- **Telemetrie WiFi** : bridge entre ESP32 et ROS2 via micro-ROS
-- **Simulation de vagues** : plugin `gz-waves` de VRX (Virtual RobotX)
-- **Camera** : ajouter un capteur camera dans le SDF pour la vision
-- **Lidar** : simuler un lidar 2D pour la detection d'obstacles
-
----
-
-## References
-
-- [ROS2 Jazzy Documentation](https://docs.ros.org/en/jazzy/)
-- [Gazebo Harmonic Documentation](https://gazebosim.org/docs/harmonic/)
-- [ros_gz GitHub](https://github.com/gazebosim/ros_gz)
-- [VRX (Virtual RobotX) — simulation de bateaux](https://github.com/osrf/vrx)
-- [SDF Format Specification](http://sdformat.org/spec)
+- [ ] Mode manuel / automatique avec commutation via topic
+- [ ] Intégration QGroundControl via MAVLink + MAVROS
+- [ ] Modèle physique plus réaliste (vent, courant)
