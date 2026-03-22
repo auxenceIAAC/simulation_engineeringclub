@@ -269,7 +269,7 @@ class BuoySimulatorNode(Node):
         m.pose.position.y = y
         m.pose.position.z = 1.0   # 1 m above the buoy sphere
         m.pose.orientation.w = 1.0
-        m.scale.z = 0.5           # text height in metres
+        m.scale.z = 0.8           # text height in metres
         m.color.r = 1.0
         m.color.g = 1.0
         m.color.b = 1.0
@@ -309,12 +309,12 @@ class BuoySimulatorNode(Node):
             all_markers.markers.append(self._sphere_marker(
                 red_sphere_id, gate['rx'], gate['ry'],
                 1.0, 0.0, 0.0,
-                1.0 if red_visible else 0.3,
+                1.0 if red_visible else 0.2,
                 now))
             all_markers.markers.append(self._sphere_marker(
                 green_sphere_id, gate['gx'], gate['gy'],
                 0.0, 1.0, 0.0,
-                1.0 if green_visible else 0.3,
+                1.0 if green_visible else 0.2,
                 now))
 
             # /buoys/detected — only visible buoys, with text labels
