@@ -32,6 +32,7 @@ def generate_launch_description():
     pkg_sim2d = get_package_share_directory('asket_ec_sim2d')
     rviz_config = os.path.join(pkg_sim2d, 'config', 'sim2d.rviz')
     waypoints_file = os.path.join(pkg_sim2d, 'config', 'waypoints.yaml')
+    buoys_file = os.path.join(pkg_sim2d, 'config', 'buoys.yaml')
 
     # use_sim_time=false : le simulateur Python utilise l'horloge système.
     # Pas de /clock publié → pas de "jump back in time" dans RViz2.
@@ -65,6 +66,19 @@ def generate_launch_description():
         }]
     )
 
+    # Buoy simulator — reads buoys.yaml, publishes /buoys/all,
+    # /buoys/detected (MarkerArray) and /gates/centers (Path)
+    buoy_simulator_node = Node(
+        package='asket_ec_sim2d',
+        executable='buoy_simulator_node',
+        name='buoy_simulator',
+        output='screen',
+        parameters=[{
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'buoys_file': buoys_file,
+        }]
+    )
+
     # RViz2 avec la config dédiée sim2d
     rviz_node = Node(
         package='rviz2',
@@ -80,6 +94,7 @@ def generate_launch_description():
     return LaunchDescription([
         use_sim_time_arg,
         simulator_node,
+        buoy_simulator_node,
         waypoint_navigator_node,
         rviz_node,
     ])
