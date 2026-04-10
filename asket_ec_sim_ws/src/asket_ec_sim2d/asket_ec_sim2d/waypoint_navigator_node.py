@@ -45,11 +45,13 @@ TOPICS
 Souscrit :
   /sim2d/pose        (geometry_msgs/PoseStamped) — position + cap courant
   /gates/centers     (nav_msgs/Path)              — centres de portes (priorité)
+  /manual_mode       (std_msgs/Bool)              — True=MANUAL, False=AUTO
 
 Publie :
   /cmd_vel           (geometry_msgs/Twist)        — commandes de navigation
   /waypoints/path    (nav_msgs/Path)              — tous les waypoints (rouge RViz2)
   /waypoints/current (geometry_msgs/PointStamped) — waypoint cible actuel
+  /current_mode      (std_msgs/String)            — mode courant à 1 Hz
 
 =========================================================
 PRIORITÉ DE SOURCE DES WAYPOINTS
@@ -67,6 +69,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PointStamped, PoseStamped, Twist
 from nav_msgs.msg import Path
+from std_msgs.msg import Bool, String
 
 try:
     import yaml
@@ -106,6 +109,10 @@ class WaypointNavigatorNode(Node):
     Lit les waypoints depuis waypoints.yaml, les trie par distance
     croissante depuis l'origine, puis pilote le bateau via /cmd_vel
     en utilisant un pure pursuit simplifié.
+
+    Supporte le basculement MANUAL/AUTO via /manual_mode :
+      - MANUAL : stoppe le bateau et cède le contrôle
+      - AUTO   : reprend depuis la porte la plus proche
     """
 
     def __init__(self):
@@ -152,6 +159,11 @@ class WaypointNavigatorNode(Node):
         self.using_gates = False     # True when navigating gate centres
 
         # =========================================================
+        # MODE MANUEL / AUTOMATIQUE
+        # =========================================================
+        self.manual_mode = False    # False = AUTO, True = MANUAL
+
+        # =========================================================
         # SOUSCRIPTIONS
         # =========================================================
         self.sub_pose = self.create_subscription(
@@ -170,6 +182,14 @@ class WaypointNavigatorNode(Node):
             10
         )
 
+        # Manual mode toggle from keyboard_teleop or any other source
+        self.sub_manual_mode = self.create_subscription(
+            Bool,
+            '/manual_mode',
+            self.manual_mode_callback,
+            10
+        )
+
         # =========================================================
         # PUBLICATIONS
         # =========================================================
@@ -178,11 +198,18 @@ class WaypointNavigatorNode(Node):
             Path, '/waypoints/path', 10)
         self.pub_wp_current = self.create_publisher(
             PointStamped, '/waypoints/current', 10)
+        self.pub_current_mode = self.create_publisher(
+            String, '/current_mode', 10)
 
         # =========================================================
         # TIMER 10 Hz — boucle de navigation
         # =========================================================
         self.timer = self.create_timer(0.1, self.navigation_step)
+
+        # =========================================================
+        # TIMER 1 Hz — publication du mode courant
+        # =========================================================
+        self.mode_timer = self.create_timer(1.0, self.publish_current_mode)
 
         self.get_logger().info(
             f'Navigateur waypoints démarré\n'
@@ -227,6 +254,49 @@ class WaypointNavigatorNode(Node):
                       for i, p in enumerate(local_pts))
         )
         return local_pts
+
+    def manual_mode_callback(self, msg):
+        """Handle MANUAL/AUTO mode switching from /manual_mode topic."""
+        new_manual = msg.data
+
+        if new_manual == self.manual_mode:
+            return  # No state change
+
+        if new_manual:
+            # Switching AUTO → MANUAL
+            self.manual_mode = True
+            # Immediately stop the boat
+            self.pub_cmd_vel.publish(Twist())
+            self.get_logger().info('Switching to MANUAL — navigator paused')
+        else:
+            # Switching MANUAL → AUTO
+            self.manual_mode = False
+            self.mission_complete = False
+            if self.waypoints and self.pose_received:
+                closest_idx = self._find_closest_gate()
+                self.current_wp_idx = closest_idx
+                gate_label = closest_idx + 1  # 1-based display
+                self.get_logger().info(
+                    f'Switching to AUTO — resuming from gate {gate_label}')
+            else:
+                self.get_logger().info('Switching to AUTO — navigator resumed')
+
+    def _find_closest_gate(self):
+        """Return the index of the waypoint closest to the current boat position."""
+        min_dist = float('inf')
+        closest_idx = self.current_wp_idx
+        for i, (wx, wy) in enumerate(self.waypoints):
+            dist = math.hypot(wx - self.current_x, wy - self.current_y)
+            if dist < min_dist:
+                min_dist = dist
+                closest_idx = i
+        return closest_idx
+
+    def publish_current_mode(self):
+        """Publish the current navigation mode on /current_mode at 1 Hz."""
+        mode_msg = String()
+        mode_msg.data = 'MANUAL' if self.manual_mode else 'AUTO'
+        self.pub_current_mode.publish(mode_msg)
 
     def gate_centers_callback(self, msg):
         """
@@ -278,13 +348,17 @@ class WaypointNavigatorNode(Node):
         Boucle de navigation à 10 Hz.
 
         Publie /waypoints/path et /waypoints/current à chaque tick.
-        Publie /cmd_vel uniquement si une pose a été reçue et que
-        la mission n'est pas terminée.
+        Publie /cmd_vel uniquement si une pose a été reçue, que la mission
+        n'est pas terminée, et que le mode est AUTO.
         """
         now = self.get_clock().now().to_msg()
 
         # --- Publier le chemin de tous les waypoints ---
         self._publish_waypoints_path(now)
+
+        # En mode MANUAL, le navigateur ne publie pas de commandes
+        if self.manual_mode:
+            return
 
         if not self.pose_received or self.mission_complete:
             return

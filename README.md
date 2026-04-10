@@ -49,7 +49,8 @@ asket_ec_sim2d/
 ├── asket_ec_sim2d/
 │   ├── simulator_node.py           # boat physics at 50Hz
 │   ├── buoy_simulator_node.py      # camera sensor — detects buoys and gates
-│   └── waypoint_navigator_node.py  # navigation brain — steers through gates
+│   ├── waypoint_navigator_node.py  # navigation brain — steers through gates
+│   └── keyboard_teleop_node.py     # keyboard teleoperation — MANUAL/AUTO mode
 ├── config/
 │   ├── waypoints.yaml              # GPS target points (fallback)
 │   ├── buoys.yaml                  # gate definitions (red + green buoy pairs)
@@ -272,6 +273,43 @@ ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
 
 ---
 
+## Manual control — keyboard teleoperation
+
+Launch in a new terminal (while the simulator and navigator are already running):
+
+```bash
+source /opt/ros/jazzy/setup.bash
+~/.local/bin/keyboard_teleop_node
+```
+
+### Key mapping
+
+| Key        | Action      | linear.x | angular.z |
+|------------|-------------|----------|-----------|
+| Z / ↑      | Forward     | 1.5      | 0.0       |
+| S / ↓      | Backward    | -1.0     | 0.0       |
+| Q / ←      | Turn left   | 0.3      | 1.0       |
+| D / →      | Turn right  | 0.3      | -1.0      |
+| Space      | Stop        | 0.0      | 0.0       |
+| M          | Toggle mode | —        | —         |
+| Ctrl+C     | Quit        | —        | —         |
+
+### How it works
+
+- **M** toggles between MANUAL and AUTO mode by publishing on `/manual_mode`.
+- In **AUTO** mode the navigator resumes from the **closest gate** to the current
+  boat position — not from gate 1. Movement keypresses are ignored in AUTO mode.
+- In **MANUAL** mode the navigator stops publishing `/cmd_vel` immediately and
+  the keyboard takes over. The terminal prints the mode and last command at every
+  keypress:
+
+```
+[MANUAL] linear=1.5 angular=0.0
+[AUTO]   Navigator active — press M to switch to MANUAL
+```
+
+---
+
 ## How it works (technical overview)
 
 ### Differential drive physics
@@ -326,6 +364,8 @@ Barcelona reference point (41.3851°N, 2.1734°E) as the origin (0, 0).
 | `/buoys/all` | `visualization_msgs/MarkerArray` | `buoy_simulator` | RViz2 | All buoys — bright if visible, dim if not |
 | `/buoys/detected` | `visualization_msgs/MarkerArray` | `buoy_simulator` | RViz2 | Currently visible buoys with labels |
 | `/gates/centers` | `nav_msgs/Path` | `buoy_simulator` | `waypoint_navigator` | Gate midpoints to navigate through |
+| `/manual_mode` | `std_msgs/Bool` | `keyboard_teleop` | `waypoint_navigator` | true=MANUAL false=AUTO |
+| `/current_mode` | `std_msgs/String` | `waypoint_navigator` | — | Current mode published at 1 Hz |
 
 ---
 
@@ -366,14 +406,14 @@ not where the data comes from.
 
 ### Next steps — simulation
 
-- [ ] Manual / automatic mode switching via ROS2 topic
+- [x] Manual / automatic mode switching via ROS2 topic
       → publish `True`/`False` on `/manual_mode` to override the navigator
+- [x] Keyboard teleoperation node
+      → control the boat with arrow keys in manual mode
 - [ ] LIDAR obstacle simulation
       → publish `sensor_msgs/LaserScan` on `/scan` with simulated obstacles
 - [ ] Obstacle avoidance algorithm
       → modify `waypoint_navigator` to detour around detected obstacles
-- [ ] Keyboard teleoperation node
-      → control the boat with arrow keys in manual mode
 
 ### Next steps — real hardware integration
 
