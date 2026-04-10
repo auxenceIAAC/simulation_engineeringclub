@@ -28,6 +28,8 @@ Subscribes:
 
 Publishes:
   /scan                (sensor_msgs/LaserScan)           — 360° scan at 10 Hz
+                         frame_id=odom, angle_min=boat_heading
+                         → rays directly renderable in RViz2 without TF
   /obstacles/markers   (visualization_msgs/MarkerArray)  — grey cylinders in RViz2
 """
 
@@ -202,11 +204,17 @@ class LidarSimulatorNode(Node):
                     min_dist = d
             ranges.append(min_dist)
 
+        # Publish in the odom frame so RViz2 (Fixed Frame = odom) can render
+        # the rays without a TF lookup.  angle_min is set to the boat's current
+        # heading so ray 0 points forward and all angles are in world-frame
+        # coordinates.  Ray endpoints in odom frame:
+        #   x = boat_x + ranges[i] * cos(boat_heading + i * ANGLE_INCREMENT)
+        #   y = boat_y + ranges[i] * sin(boat_heading + i * ANGLE_INCREMENT)
         scan = LaserScan()
         scan.header.stamp = now
-        scan.header.frame_id = 'base_link'
-        scan.angle_min = ANGLE_MIN
-        scan.angle_max = ANGLE_MAX
+        scan.header.frame_id = 'odom'
+        scan.angle_min = self.boat_heading
+        scan.angle_max = self.boat_heading + 2.0 * math.pi
         scan.angle_increment = ANGLE_INCREMENT
         scan.time_increment = 0.0
         scan.scan_time = 0.1

@@ -282,7 +282,11 @@ class WaypointNavigatorNode(Node):
         return local_pts
 
     def manual_mode_callback(self, msg):
-        """Handle MANUAL/AUTO mode switching from /manual_mode topic."""
+        """Handle MANUAL/AUTO mode switching from /manual_mode topic.
+
+        passed_gates is NEVER reset here — it persists across mode switches.
+        It is only cleared in gate_centers_callback on first gate reception.
+        """
         new_manual = msg.data
 
         if new_manual == self.manual_mode:
@@ -296,11 +300,13 @@ class WaypointNavigatorNode(Node):
             self.get_logger().info('Switching to MANUAL — navigator paused')
         else:
             # Switching MANUAL → AUTO
+            # passed_gates is intentionally kept — already-passed gates are
+            # never re-targeted even if the boat drifts back past them.
             self.manual_mode = False
             if self.waypoints and self.pose_received:
                 closest_idx = self._find_closest_gate()
                 if closest_idx is None:
-                    # All gates already passed — nothing left to do
+                    # All gates already passed — keep mission_complete = True
                     self.get_logger().info(
                         'Switching to AUTO — all gates already passed, mission complete')
                 else:
@@ -358,6 +364,9 @@ class WaypointNavigatorNode(Node):
         ]
 
         if not self.using_gates:
+            # First reception: full reset including passed_gates.
+            # This is the ONLY place passed_gates is cleared — mode switches
+            # (MANUAL ↔ AUTO) never touch it.
             self.waypoints = gate_centers
             self.current_wp_idx = 0
             self.mission_complete = False
