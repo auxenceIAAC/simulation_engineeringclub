@@ -4,13 +4,23 @@ keyboard_teleop_node.py — Keyboard teleoperation for manual boat control.
 =========================================================
 KEY MAPPING
 =========================================================
-  Z / Arrow Up    : forward  (linear.x=1.5, angular.z=0.0)
-  S / Arrow Down  : backward (linear.x=-1.0, angular.z=0.0)
-  Q / Arrow Left  : turn left  (linear.x=0.3, angular.z=1.0)
-  D / Arrow Right : turn right (linear.x=0.3, angular.z=-1.0)
-  Space           : stop (linear.x=0.0, angular.z=0.0)
+  Z / Arrow Up    : forward impulse  (linear.x=1.5 for 0.3 s)
+  S / Arrow Down  : backward impulse (linear.x=-1.0 for 0.3 s)
+  Q / Arrow Left  : turn left  impulse (angular.z=2.0 for 0.3 s)
+  D / Arrow Right : turn right impulse (angular.z=-2.0 for 0.3 s)
+  Space           : immediate stop (linear.x=0.0, angular.z=0.0)
   M               : toggle MANUAL/AUTO mode
   Ctrl+C          : exit cleanly
+
+=========================================================
+IMPULSE CONTROL PHILOSOPHY
+=========================================================
+Each keypress sends a command for exactly 0.3 seconds, then
+automatically publishes a stop (linear.x=0, angular.z=0).
+
+  - One press  = one nudge
+  - Rapid presses chain smoothly (pending timer is cancelled)
+  - Space = immediate stop, no timer needed
 
 =========================================================
 TOPICS
@@ -47,17 +57,18 @@ _ARROW_DOWN = '\x1b[B'
 _ARROW_LEFT = '\x1b[D'
 _ARROW_RIGHT = '\x1b[C'
 
-# (linear.x, angular.z) for each key
+# (linear.x, angular.z) impulse values for each key.
+# Space sends a zero command (immediate stop) — no 0.3 s timer needed.
 KEY_COMMANDS = {
-    'z': (0.8, 0.0),
-    's': (-0.5, 0.0),
-    'q': (0.3, 1.0),
-    'd': (0.3, -1.0),
+    'z': (1.5, 0.0),
+    's': (-1.0, 0.0),
+    'q': (0.0, 2.0),
+    'd': (0.0, -2.0),
     ' ': (0.0, 0.0),
-    _ARROW_UP: (0.8, 0.0),
-    _ARROW_DOWN: (-0.5, 0.0),
-    _ARROW_LEFT: (0.3, 1.0),
-    _ARROW_RIGHT: (0.3, -1.0),
+    _ARROW_UP:    (1.5, 0.0),
+    _ARROW_DOWN:  (-1.0, 0.0),
+    _ARROW_LEFT:  (0.0, 2.0),
+    _ARROW_RIGHT: (0.0, -2.0),
 }
 
 _HELP = (
@@ -92,6 +103,10 @@ class KeyboardTeleopNode(Node):
         # Start in MANUAL mode so the node immediately takes control
         self.manual_mode = True
 
+        # Timer used for impulse stop (0.3 s after each movement keypress)
+        self._stop_timer = None
+        self._timer_lock = threading.Lock()
+
         self.pub_cmd_vel = self.create_publisher(Twist, '/cmd_vel', 10)
         self.pub_manual_mode = self.create_publisher(Bool, '/manual_mode', 10)
 
@@ -125,6 +140,26 @@ class KeyboardTeleopNode(Node):
         cmd.linear.x = linear_x
         cmd.angular.z = angular_z
         self.pub_cmd_vel.publish(cmd)
+
+    def send_impulse(self, linear_x: float, angular_z: float):
+        """Send a command impulse, then auto-stop after 0.3 s.
+
+        Cancels any pending stop timer so rapid keypresses chain smoothly.
+        Space (0, 0) stops immediately without scheduling a redundant timer.
+        """
+        with self._timer_lock:
+            if self._stop_timer is not None:
+                self._stop_timer.cancel()
+                self._stop_timer = None
+
+        self.send_cmd_vel(linear_x, angular_z)
+
+        if linear_x != 0.0 or angular_z != 0.0:
+            t = threading.Timer(0.3, self.send_cmd_vel, args=(0.0, 0.0))
+            t.daemon = True
+            t.start()
+            with self._timer_lock:
+                self._stop_timer = t
 
 
 def _keyboard_loop(node: KeyboardTeleopNode):
@@ -167,7 +202,7 @@ def _keyboard_loop(node: KeyboardTeleopNode):
             linear_x, angular_z = cmd
 
             if node.manual_mode:
-                node.send_cmd_vel(linear_x, angular_z)
+                node.send_impulse(linear_x, angular_z)
                 print(
                     f'\r[MANUAL] linear={linear_x:.1f} angular={angular_z:.1f}          '
                 )

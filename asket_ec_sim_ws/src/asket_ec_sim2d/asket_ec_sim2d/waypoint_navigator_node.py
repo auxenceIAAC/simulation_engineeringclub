@@ -157,6 +157,7 @@ class WaypointNavigatorNode(Node):
         self.current_wp_idx = 0     # Index du waypoint cible courant
         self.mission_complete = False
         self.using_gates = False     # True when navigating gate centres
+        self.passed_gates = []       # Indices of gates already passed (never re-targeted)
 
         # =========================================================
         # MODE MANUEL / AUTOMATIQUE
@@ -271,26 +272,43 @@ class WaypointNavigatorNode(Node):
         else:
             # Switching MANUAL → AUTO
             self.manual_mode = False
-            self.mission_complete = False
             if self.waypoints and self.pose_received:
                 closest_idx = self._find_closest_gate()
-                self.current_wp_idx = closest_idx
-                gate_label = closest_idx + 1  # 1-based display
-                self.get_logger().info(
-                    f'Switching to AUTO — resuming from gate {gate_label}')
+                if closest_idx is None:
+                    # All gates already passed — nothing left to do
+                    self.get_logger().info(
+                        'Switching to AUTO — all gates already passed, mission complete')
+                else:
+                    self.current_wp_idx = closest_idx
+                    self.mission_complete = False
+                    gate_label = closest_idx + 1  # 1-based display
+                    self.get_logger().info(
+                        f'Switching to AUTO — resuming from gate {gate_label}')
             else:
                 self.get_logger().info('Switching to AUTO — navigator resumed')
 
+    def _find_next_unpassed_gate(self):
+        """Return the lowest index not yet in passed_gates, or None if all passed."""
+        for i in range(len(self.waypoints)):
+            if i not in self.passed_gates:
+                return i
+        return None
+
     def _find_closest_gate(self):
-        """Return the index of the waypoint closest to the current boat position."""
+        """Return the index of the closest waypoint that has NOT been passed yet.
+
+        Falls back to the current index if every gate has already been passed.
+        """
         min_dist = float('inf')
-        closest_idx = self.current_wp_idx
+        closest_idx = None
         for i, (wx, wy) in enumerate(self.waypoints):
+            if i in self.passed_gates:
+                continue
             dist = math.hypot(wx - self.current_x, wy - self.current_y)
             if dist < min_dist:
                 min_dist = dist
                 closest_idx = i
-        return closest_idx
+        return closest_idx  # None when all gates are passed
 
     def publish_current_mode(self):
         """Publish the current navigation mode on /current_mode at 1 Hz."""
@@ -318,6 +336,7 @@ class WaypointNavigatorNode(Node):
             self.waypoints = gate_centers
             self.current_wp_idx = 0
             self.mission_complete = False
+            self.passed_gates = []
             self.using_gates = True
             self.get_logger().info(
                 f'Gate navigation activated — '
@@ -390,9 +409,11 @@ class WaypointNavigatorNode(Node):
                     f'Waypoint [{self.current_wp_idx}] atteint '
                     f'(distance={distance:.2f}m)')
 
-            self.current_wp_idx += 1
+            # Mark this gate as passed — it will never be re-targeted
+            self.passed_gates.append(self.current_wp_idx)
 
-            if self.current_wp_idx >= len(self.waypoints):
+            next_idx = self._find_next_unpassed_gate()
+            if next_idx is None:
                 if self.using_gates:
                     self.get_logger().info(
                         'All gates passed ✓  Mission complete!')
@@ -403,6 +424,7 @@ class WaypointNavigatorNode(Node):
                 self.pub_cmd_vel.publish(Twist())
                 return
 
+            self.current_wp_idx = next_idx
             if self.using_gates:
                 next_x, next_y = self.waypoints[self.current_wp_idx]
                 self.get_logger().info(

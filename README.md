@@ -243,6 +243,11 @@ gates:
 
 To change the course, edit the GPS coordinates. `0.0001` degrees ≈ 11 metres.
 
+> **Gates are one-way.** Once the boat passes a gate, that gate is permanently
+> marked as done and will never be re-targeted — even if the boat drifts back
+> past it. Switching from MANUAL to AUTO always resumes from the **closest
+> unpassed gate**, not from gate 1.
+
 ### Fallback waypoints (`config/waypoints.yaml`)
 
 Used only if `buoy_simulator_node` is not running.
@@ -284,21 +289,26 @@ source /opt/ros/jazzy/setup.bash
 
 ### Key mapping
 
-| Key        | Action      | linear.x | angular.z |
-|------------|-------------|----------|-----------|
-| Z / ↑      | Forward     | 1.5      | 0.0       |
-| S / ↓      | Backward    | -1.0     | 0.0       |
-| Q / ←      | Turn left   | 0.3      | 1.0       |
-| D / →      | Turn right  | 0.3      | -1.0      |
-| Space      | Stop        | 0.0      | 0.0       |
-| M          | Toggle mode | —        | —         |
-| Ctrl+C     | Quit        | —        | —         |
+| Key        | Action       | linear.x | angular.z | Duration |
+|------------|--------------|----------|-----------|----------|
+| Z / ↑      | Forward      | 1.5      | 0.0       | 0.3 s    |
+| S / ↓      | Backward     | -1.0     | 0.0       | 0.3 s    |
+| Q / ←      | Turn left    | 0.0      | 2.0       | 0.3 s    |
+| D / →      | Turn right   | 0.0      | -2.0      | 0.3 s    |
+| Space      | Stop (immed) | 0.0      | 0.0       | —        |
+| M          | Toggle mode  | —        | —         | —        |
+| Ctrl+C     | Quit         | —        | —         | —        |
 
 ### How it works
 
+- **Impulse control:** each keypress sends a command for exactly **0.3 seconds**,
+  then an automatic stop is published. One press = one nudge. Pressing rapidly
+  chains impulses smoothly (the pending stop is cancelled before the next command
+  fires). Space always stops immediately.
 - **M** toggles between MANUAL and AUTO mode by publishing on `/manual_mode`.
-- In **AUTO** mode the navigator resumes from the **closest gate** to the current
-  boat position — not from gate 1. Movement keypresses are ignored in AUTO mode.
+- In **AUTO** mode the navigator resumes from the **closest unpassed gate** —
+  already-passed gates are never re-targeted even if the boat drifts back past
+  them. Movement keypresses are ignored in AUTO mode.
 - In **MANUAL** mode the navigator stops publishing `/cmd_vel` immediately and
   the keyboard takes over. The terminal prints the mode and last command at every
   keypress:
