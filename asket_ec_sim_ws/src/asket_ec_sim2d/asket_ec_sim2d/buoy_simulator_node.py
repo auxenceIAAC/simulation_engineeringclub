@@ -247,10 +247,9 @@ class BuoySimulatorNode(Node):
         m.pose.position.y = y
         m.pose.position.z = 0.0
         m.pose.orientation.w = 1.0
-        # scale = diameter; radius 0.3 m → diameter 0.6 m
-        m.scale.x = 0.6
-        m.scale.y = 0.6
-        m.scale.z = 0.6
+        m.scale.x = 2.0
+        m.scale.y = 2.0
+        m.scale.z = 2.0
         m.color.r = r
         m.color.g = g
         m.color.b = b

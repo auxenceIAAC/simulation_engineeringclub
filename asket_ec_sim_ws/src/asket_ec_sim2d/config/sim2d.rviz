@@ -7,7 +7,7 @@ Panels:
         - /Global Options1
         - /Grid1
         - /Path1
-        - /Pose1
+        - /Boat1
       Splitter Ratio: 0.5
     Tree Height: 500
   - Class: rviz_common/Selection
@@ -23,10 +23,10 @@ Panels:
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
-      Cell Size: 5
+    - Alpha: 0.35
+      Cell Size: 10
       Class: rviz_default_plugins/Grid
-      Color: 160; 160; 164
+      Color: 50; 110; 160
       Enabled: true
       Line Style:
         Line Width: 0.029999999329447746
@@ -44,22 +44,22 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 0; 200; 0
+      Color: 0; 220; 200
       Enabled: true
       Head Arrow Shaft Diameter: 0.10000000149011612
       Head Arrow Shaft Length: 0.20000000298023224
       Head Arrow Tip Diameter: 0.20000000298023224
       Head Arrow Tip Length: 0.10000000149011612
-      Head Color: 0; 255; 0
+      Head Color: 0; 220; 200
       Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.05000000074505806
+      Line Width: 0.15000000596046448
       Name: Path
       Offset:
         X: 0
         Y: 0
         Z: 0
-      Pose Color: 0; 255; 0
+      Pose Color: 0; 220; 200
       Pose Style: None
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
@@ -77,10 +77,10 @@ Visualization Manager:
       Axes Radius: 0.10000000149011612
       Class: rviz_default_plugins/Pose
       Color: 255; 85; 0
-      Enabled: true
+      Enabled: false
       Head Length: 0.5
       Head Radius: 0.20000000298023224
-      Name: Pose
+      Name: Pose (arrow — disabled)
       Shaft Length: 1
       Shaft Radius: 0.07999999821186066
       Shape: Arrow
@@ -91,26 +91,37 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /sim2d/pose
+      Value: false
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Boat
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /sim2d/boat_shape
       Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 220; 0; 0
+      Color: 220; 60; 60
       Enabled: true
       Head Arrow Shaft Diameter: 0.10000000149011612
       Head Arrow Shaft Length: 0.20000000298023224
       Head Arrow Tip Diameter: 0.20000000298023224
       Head Arrow Tip Length: 0.10000000149011612
-      Head Color: 255; 0; 0
+      Head Color: 255; 60; 60
       Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.07999999821186066
+      Line Width: 0.10000000149011612
       Name: Waypoints
       Offset:
         X: 0
         Y: 0
         Z: 0
-      Pose Color: 255; 0; 0
+      Pose Color: 255; 60; 60
       Pose Style: None
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
@@ -148,22 +159,22 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 255; 255; 255
+      Color: 255; 255; 180
       Enabled: true
       Head Arrow Shaft Diameter: 0.10000000149011612
       Head Arrow Shaft Length: 0.20000000298023224
       Head Arrow Tip Diameter: 0.20000000298023224
       Head Arrow Tip Length: 0.10000000149011612
-      Head Color: 255; 255; 255
+      Head Color: 255; 255; 180
       Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.07999999821186066
+      Line Width: 0.10000000149011612
       Name: Gate Centers
       Offset:
         X: 0
         Y: 0
         Z: 0
-      Pose Color: 255; 255; 255
+      Pose Color: 255; 255; 180
       Pose Style: None
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
@@ -178,7 +189,7 @@ Visualization Manager:
       Value: true
   Enabled: true
   Global Options:
-    Background Color: 30; 30; 30
+    Background Color: 15; 40; 70
     Fixed Frame: odom
     Frame Rate: 30
   Name: root
